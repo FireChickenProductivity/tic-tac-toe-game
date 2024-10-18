@@ -3,6 +3,15 @@ from protocol_type_codes import *
 from packing_utilities import *
 from protocol_classes import *
 
+class Message:
+    """Class for keeping track of type the code and message values for a message"""
+    def __init__(self, type_code, values):
+        self.type_code = type_code
+        self.values = values
+
+    def __str__(self):
+        return f"Type Code: {self.type_code}, Values: {self.values}"
+
 class ProtocolMap:
     """Maps between type codes and protocols"""
     def __init__(self, protocols):
@@ -158,7 +167,7 @@ class MessageHandler:
         return self.values
     
     def get_number_of_bytes_extracted(self):
-        return self.bytes_index
+        return self.bytes_index + TYPE_CODE_SIZE
 
 class ProtocolCallbackHandler:
     """Used to map between the callback functions to be called when a message corresponding to a protocol is received"""
