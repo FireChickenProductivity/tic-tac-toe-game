@@ -40,6 +40,7 @@ class Client:
             output_text_function: the function used to output text for the client. This is settable as an argument primarily to aid with testing
             socket_creation_function: the function used to create the socket from an address, which is settable to help with testing
         """
+        self.username = None
         self.current_game = None
         self.output_text = output_text_function
         self.selector = selector
@@ -57,6 +58,8 @@ class Client:
 
     def handle_text_message(self, values):
         """Displays a text message from the server"""
+        if "You are signed in as" in values["text"]:
+            self.username = values["text"].split(" ")[-1]
         self.output_text("Server: " + values["text"])
 
     def _create_protocol_callback_handler(self):
@@ -123,11 +126,18 @@ class Client:
                 type_code = protocol_definitions.GAME_CREATION_PROTOCOL_TYPE_CODE
                 values = (value,)
         elif action == "move":
-            if self.current_game is not None and game_actions.is_valid_move_text(value):
-                type_code = protocol_definitions.GAME_UPDATE_PROTOCOL_TYPE_CODE
-                move_number = game_actions.convert_move_text_to_move_number(value)
-                values = (move_number,)
-
+                if self.current_game is not None and game_actions.is_valid_move_text(value):
+                    move_number = game_actions.convert_move_text_to_move_number(value)
+                    current_player = game_actions.compute_current_player(self.current_game)
+                    if current_player == self.username:
+                        type_code = protocol_definitions.GAME_UPDATE_PROTOCOL_TYPE_CODE
+                        values = (move_number,)
+                    else:
+                        print("Not your turn.")
+                elif self.current_game is None:
+                    print("You are not in a game.")
+                else:
+                    print("Invalid move.")
         if type_code is not None:
             request = protocol.Message(type_code, values)
         return request

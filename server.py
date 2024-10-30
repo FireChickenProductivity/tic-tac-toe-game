@@ -157,26 +157,29 @@ class Server:
             failure_message = Message(protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE, (f"You are not in a game, so you cannot quit one.",))
             self.connection_table.send_message_to_entry(failure_message, connection_information)
 
-    def handle_game_move(self, values, connection_information):
-        state = self.connection_table.get_entry_state(connection_information)
-        game = state.current_game
-        if game is None:
-            failure_message = Message(protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE, (f"You are not in a game, so you cannot make moves.",))
-            self.connection_table.send_message_to_entry(failure_message, connection_information)
+def handle_game_move(self, values, connection_information):
+    state = self.connection_table.get_entry_state(connection_information)
+    game = state.current_game
+    if game is None:
+        failure_message = Message(protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE, ("You are not in a game, so you cannot make moves.",))
+        self.connection_table.send_message_to_entry(failure_message, connection_information)
+    elif game.get_current_turn() != state.username:
+        failure_message = Message(protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE, ("Not your turn.",))
+        self.connection_table.send_message_to_entry(failure_message, connection_information)
+    else:
+        if game.make_move(state.username, values["number"]):
+            game_text = game.compute_text()
+            game_message = Message(protocol_definitions.GAME_UPDATE_PROTOCOL_TYPE_CODE, (game_text,))
+            self.connection_table.send_message_to_entry(game_message, connection_information)
+            other_player_username = game.compute_other_player(state.username)
+            if other_player_username in self.usernames_to_connections:
+                other_player_connection_information = self.usernames_to_connections[other_player_username]
+                other_player_game_state = self.connection_table.get_entry_state(other_player_connection_information)
+                if other_player_game_state.current_game is not None and other_player_game_state.current_game.compute_other_player(other_player_username) == state.username:
+                    self.connection_table.send_message_to_entry(game_message, other_player_connection_information)
         else:
-            if game.make_move(state.username, values["number"]):
-                game_text = game.compute_text()
-                game_message = Message(protocol_definitions.GAME_UPDATE_PROTOCOL_TYPE_CODE, (game_text,))
-                self.connection_table.send_message_to_entry(game_message, connection_information)
-                other_player_username = game.compute_other_player(state.username)
-                if other_player_username in self.usernames_to_connections:
-                    other_player_connection_information = self.usernames_to_connections[other_player_username]
-                    other_player_game_state = self.connection_table.get_entry_state(other_player_connection_information)
-                    if other_player_game_state.current_game is not None and other_player_game_state.current_game.compute_other_player(other_player_username) == state.username:
-                        self.connection_table.send_message_to_entry(game_message, other_player_connection_information)
-            else:
-                failure_message = Message(protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE, (f"The move was not permitted!",))
-                self.connection_table.send_message_to_entry(failure_message, connection_information)
+            failure_message = Message(protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE, ("Invalid move.",))
+            self.connection_table.send_message_to_entry(failure_message, connection_information)
 
 
     def cleanup_connection(self, connection_information):
