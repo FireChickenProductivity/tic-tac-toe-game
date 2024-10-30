@@ -78,6 +78,7 @@ class Server:
         self.protocol_callback_handler.register_callback_with_protocol(self.handle_game_join, protocol_definitions.JOIN_GAME_PROTOCOL_TYPE_CODE)
         self.protocol_callback_handler.register_callback_with_protocol(self.handle_game_quit, protocol_definitions.QUIT_GAME_PROTOCOL_TYPE_CODE)
         self.protocol_callback_handler.register_callback_with_protocol(self.handle_game_move, protocol_definitions.GAME_UPDATE_PROTOCOL_TYPE_CODE)
+        self.protocol_callback_handler.register_callback_with_protocol(self.handle_chat_message, protocol_definitions.CHAT_MESSAGE_PROTOCOL_TYPE_CODE)
 
     def create_help_message(self, values, connection_information):
         label: str = values.get("text", "")
@@ -181,6 +182,19 @@ class Server:
                 failure_message = Message(protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE, ("Invalid move.",))
                 self.connection_table.send_message_to_entry(failure_message, connection_information)
 
+    def handle_chat_message(self, values, connection_information):
+        state = self.connection_table.get_entry_state(connection_information)
+        game = state.current_game
+        username = state.username
+        other_player_username = game.compute_other_player(state.username)
+        text = f"{username}: {values}"
+
+## need to parse values properly to get client's message to print.
+
+        message = Message(protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE, (text,))
+        self.connection_table.send_message_to_entry(message, connection_information)
+        other_player_connection_information = self.usernames_to_connections[other_player_username]
+        self.connection_table.send_message_to_entry(message, other_player_connection_information)
 
     def cleanup_connection(self, connection_information):
         """Performs cleanup when a connection gets closed"""

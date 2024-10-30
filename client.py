@@ -132,6 +132,11 @@ class Client:
                     values = (move_number,)
                 else:
                     return None
+        elif action == "chat":
+            if  value != "" and self.current_game is not None:
+                type_code = protocol_definitions.CHAT_MESSAGE_PROTOCOL_TYPE_CODE
+                values = (value,)
+
 
         if type_code is not None:
             request = protocol.Message(type_code, values)
