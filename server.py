@@ -185,6 +185,9 @@ class Server:
     def handle_chat_message(self, values, connection_information):
         state = self.connection_table.get_entry_state(connection_information)
         game = state.current_game
+        if game is None:
+            failure_message = Message(protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE, ("You are not in a game, so you cannot send chat messages.",))
+            self.connection_table.send_message_to_entry(failure_message, connection_information)
         username = state.username
         other_player_username = game.compute_other_player(state.username)
         chat = values["text"]
