@@ -187,10 +187,8 @@ class Server:
         game = state.current_game
         username = state.username
         other_player_username = game.compute_other_player(state.username)
-        text = f"{username}: {values}"
-
-## need to parse values properly to get client's message to print.
-
+        chat = values["text"]
+        text = f"{username}: {chat}"
         message = Message(protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE, (text,))
         self.connection_table.send_message_to_entry(message, connection_information)
         other_player_connection_information = self.usernames_to_connections[other_player_username]
