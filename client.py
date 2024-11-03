@@ -45,7 +45,7 @@ class Client:
             output_text_function: the function used to output text for the client. This is settable as an argument primarily to aid with testing
             socket_creation_function: the function used to create the socket from an address, which is settable to help with testing
         """
-        self.username = None
+        self.credentials = None
         self.reconnection_timeout = self.DEFAULT_RECONNECTION_TIMEOUT
         self.host = host
         self.port = port
@@ -140,6 +140,7 @@ class Client:
             values = _parse_two_space_separated_values(value)
             if values is not None:
                 type_code = protocol_definitions.SIGN_IN_PROTOCOL_TYPE_CODE
+                self.credentials = values
         elif action == "register":
             values = _parse_two_space_separated_values(value)
             if values is not None:
