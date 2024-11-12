@@ -67,3 +67,8 @@ class GameHandler:
     
     def sorted_game_id(self, creator_username, invited_username):
         return ' '.join(sorted([creator_username, invited_username]))
+    
+    def remove_game(self, creator_username, invited_username):
+        game_id = self.sorted_game_id(creator_username, invited_username)
+        if game_id in self.games:
+            del self.games[game_id]

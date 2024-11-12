@@ -167,8 +167,8 @@ class Server:
             failure_message = Message(protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE, ("You are not in a game, so you cannot make moves.",))
             self.connection_table.send_message_to_entry(failure_message, connection_information)
         elif game.get_current_turn() != state.username:
-            failure_message = Message(protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE, ("Not your turn.",))
-            self.connection_table.send_message_to_entry(failure_message, connection_information)
+            out_of_turn_message = Message(protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE, ("Not your turn. Wait for your opponent's move.",))
+            self.connection_table.send_message_to_entry(out_of_turn_message, connection_information)
         else:
             if game.make_move(state.username, values["number"]):
                 game_text = game.compute_text()
@@ -177,12 +177,23 @@ class Server:
                 other_player_username = game.compute_other_player(state.username)
                 if other_player_username in self.usernames_to_connections:
                     other_player_connection_information = self.usernames_to_connections[other_player_username]
-                    other_player_game_state = self.connection_table.get_entry_state(other_player_connection_information)
-                    if other_player_game_state.current_game is not None and other_player_game_state.current_game.compute_other_player(other_player_username) == state.username:
-                        self.connection_table.send_message_to_entry(game_message, other_player_connection_information)
+                    self.connection_table.send_message_to_entry(game_message, other_player_connection_information)
+
+                # checks win condition
+                winner = game.check_winner()
+                if winner:
+                    winner_message = Message(protocol_definitions.GAME_OVER_PROTOCOL_TYPE_CODE, (f"Game over! Winner: {winner}",))
+                    self.connection_table.send_message_to_entry(winner_message, connection_information)
+                    other_player_connection_information = self.usernames_to_connections[other_player_username]
+                    self.connection_table.send_message_to_entry(winner_message, other_player_connection_information)
+
+                    # resets game state
+                    state.current_game = None
+                    game.current_turn = None
+                    self.game_handler.remove_game(game.creator_username, game.invited_username)
             else:
-                failure_message = Message(protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE, ("Invalid move.",))
-                self.connection_table.send_message_to_entry(failure_message, connection_information)
+                invalid_move_message = Message(protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE, ("Invalid move.",))
+                self.connection_table.send_message_to_entry(invalid_move_message, connection_information)
 
 
     def cleanup_connection(self, connection_information):
