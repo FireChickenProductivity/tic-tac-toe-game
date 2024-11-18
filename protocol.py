@@ -84,12 +84,6 @@ class MessageHandler:
         self.values = []
         self.is_done = True
 
-    def _update_values_based_on_fixed_length_protocol(self):
-        if len(self.bytes) >= self.protocol.get_size():
-            self.values = self.protocol.unpack(self.bytes[:self.protocol.get_size()])
-            self.is_done = True
-            self.bytes_index = self.protocol.get_size()
-
     def _update_next_expected_size(self):
         if self.protocol.is_field_fixed_length(self.field_index):
             self.next_expected_size = self.protocol.compute_fixed_length_field_length(self.field_index)
@@ -140,8 +134,6 @@ class MessageHandler:
     def _update_values(self):
         if self.protocol.get_number_of_fields() == 0:
             self._update_values_based_on_fieldless_protocol()
-        elif self.protocol.is_fixed_length():
-            self._update_values_based_on_fixed_length_protocol()
         else:
             self._update_values_based_on_variable_length_protocol()
 
