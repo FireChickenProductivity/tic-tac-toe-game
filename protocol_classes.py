@@ -43,62 +43,6 @@ class TypeCodeOnlyMessageProtocol(MessageProtocol):
         """Returns a message for the protocol containing only the type code"""
         return pack_type_code(self.type_code)
 
-class FixedLengthMessageProtocol(MessageProtocol):
-    """
-        Defines a fixed length message protocol
-        type_code: the type code for the protocol
-        fields: the fields corresponding to the protocol
-    """
-    def __init__(self, type_code, fields):
-        self.type_code = type_code
-        self.fields = fields
-        self.size = self._compute_size()
-
-    def compute_fields_string(self):
-        """Returns a string for packing and unpacking messages conforming to the protocol"""
-        text = ">"
-        for field in self.fields:
-            text += field.compute_struct_text()
-        return text
-
-    def pack(self, *args):
-        """Pacs values into a message conforming to the protocol"""
-        args = [encode_value(value) for value in args]
-        type_code_bytes = pack_type_code(self.type_code)
-        values_bytes = struct.pack(self.compute_fields_string(), *args)
-        return type_code_bytes + values_bytes
-
-    def unpack(self, input_bytes):
-        """
-            Unpacks bytes corresponding to the protocol excluding the type code at the beginning into the contained values
-            input_bytes: bytes for a message corresponding to the protocol excluding the type code
-            returns: a list of unpacked values in the same order as the fields
-        """
-        results = []
-        values = struct.unpack(self.compute_fields_string(), input_bytes)
-        for i in range(len(values)):
-            results.append(decode_value(values[i]))
-        return results
-
-    def get_type_code(self):
-        """Returns the type code associated with the protocol"""
-        return self.type_code
-    
-    def _compute_size(self):
-        """Returns the size in bytes of a message using the protocol"""
-        size = 0
-        for i in range(len(self.fields)):
-            size += self.fields[i].get_size()
-        return size
-    
-    def get_size(self):
-        """Returns the size in bytes of a message using the protocol"""
-        return self.size
-
-    def get_number_of_fields(self):
-        """Returns the number of fields corresponding to the protocol"""
-        return len(self.fields)
-
 class VariableLengthMessageProtocol(MessageProtocol):
     """
         Defines a variable length message protocol

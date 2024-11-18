@@ -2,6 +2,17 @@ import unittest
 import protocol
 import struct
 
+def unpack_message(message, message_protocol):
+    protocol_map = protocol.ProtocolMap([message_protocol])
+    message_handler = protocol.MessageHandler(protocol_map)
+    message_handler.receive_bytes(message)
+    type_code = message_handler.get_protocol_type_code()
+    values = message_handler.get_values()
+    return (type_code, values)
+
+def unpack_message_values(message, message_protocol):
+    return unpack_message(message, message_protocol)[1]
+
 class TestMessageProtocol(unittest.TestCase):
     def _create_protocol(self):
         return protocol.create_text_message_protocol(0)
@@ -49,11 +60,6 @@ class TestSingleFieldFixedLengthProtocol(unittest.TestCase):
     def _create_protocol(self):
         return protocol.create_single_byte_nonnegative_integer_message_protocol(12)
     
-    def test_computes_correct_field_string(self):
-        expected = ">B"
-        actual = self._create_protocol().compute_fields_string()
-        self.assertEqual(expected, actual)
-    
     def test_can_correctly_pack_argument(self):
         value = 10
         protocol = self._create_protocol()
@@ -68,16 +74,10 @@ class TestSingleFieldFixedLengthProtocol(unittest.TestCase):
 
     def test_can_correctly_unpack_message(self):
         protocol = self._create_protocol()
-        input_bytes = struct.pack(">B", 100)
-        expected_result = [100]
-        actual_result = protocol.unpack(input_bytes)
+        input_bytes = struct.pack(">BB", 12, 10)
+        expected_result = (12, [10])
+        actual_result = unpack_message(input_bytes, protocol)
         self.assertEqual(expected_result, actual_result)
-
-    def test_returns_correct_size(self):
-        protocol = self._create_protocol()
-        expected = 1
-        actual = protocol.get_size()
-        self.assertEqual(actual, expected)
 
     def test_returns_correct_number_of_fields(self):
         protocol = self._create_protocol()
@@ -133,13 +133,8 @@ class TestMultipleFieldFixedLengthMessageProtocol(unittest.TestCase):
     def _compute_protocol(self):
         first_field = protocol.create_single_byte_nonnegative_integer_protocol_field('1')
         second_field = protocol.create_single_byte_nonnegative_integer_protocol_field('2')
-        result = protocol.FixedLengthMessageProtocol(100, [first_field, second_field])
+        result = protocol.VariableLengthMessageProtocol(100, [first_field, second_field])
         return result
-
-    def test_has_correct_size(self):
-        expected = 2
-        actual = self._compute_protocol().get_size()
-        self.assertEqual(expected, actual)
 
     def test_has_correct_number_of_fields(self):
         expected = 2
@@ -162,8 +157,7 @@ class TestMultipleFieldFixedLengthMessageProtocol(unittest.TestCase):
     def test_can_unpack_values_correctly(self):
         message_protocol = self._compute_protocol()
         pack, expected = self._create_pack_and_values()
-        pack = pack[1:]
-        actual = message_protocol.unpack(pack)
+        actual = unpack_message_values(pack, message_protocol)
         self.assertEqual(expected, actual)
 
 class TestMessageHandler(unittest.TestCase):
@@ -180,7 +174,7 @@ class TestMessageHandler(unittest.TestCase):
         variable_length_protocol = create_complex_variable_length_message_protocol(0)
         bigger_fixed_length_field = protocol.ConstantLengthProtocolField('big', "2s", 2)
         small_field = protocol.create_single_byte_nonnegative_integer_protocol_field('small')
-        fixed_length_protocol = protocol.FixedLengthMessageProtocol(1, [bigger_fixed_length_field, small_field])
+        fixed_length_protocol = protocol.VariableLengthMessageProtocol(1, [bigger_fixed_length_field, small_field])
         fieldless_protocol = protocol.create_protocol(2)
         protocol_map = protocol.ProtocolMap([variable_length_protocol, fixed_length_protocol, fieldless_protocol])
         return protocol_map
@@ -271,7 +265,7 @@ class TestNineCharacterSingleStringMessageProtocol(unittest.TestCase):
         text_protocol = self._create_protocol()
         input_text = "XO       "
         input_bytes = struct.pack(">B9s", 5, input_text.encode())
-        unpacked = text_protocol.unpack(input_bytes[1:])[0]
+        unpacked = unpack_message_values(input_bytes, text_protocol)[0]
         self.assertEqual(unpacked, input_text)
         type_code = protocol.unpack_type_code_from_message(input_bytes)
         self.assertEqual(type_code, 5)
@@ -291,7 +285,7 @@ class TestSingleCharacterStringMessageProtocol(unittest.TestCase):
         text_protocol = self._create_protocol()
         input_text = "X"
         input_bytes = struct.pack(">Bs", 2, input_text.encode())
-        unpacked = text_protocol.unpack(input_bytes[1:])[0]
+        unpacked = unpack_message_values(input_bytes, text_protocol)[0]
         self.assertEqual(unpacked, input_text)
         type_code = protocol.unpack_type_code_from_message(input_bytes)
         self.assertEqual(type_code, 2)

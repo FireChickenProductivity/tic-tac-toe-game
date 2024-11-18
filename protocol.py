@@ -56,7 +56,7 @@ class MessageHandler:
         How to use:
             Pass bytes to the message handler using the receive_bytes method.
             Figure out if the handler is done parsing the message or needs more bytes using the is_done_obtaining_values method.
-            Get the parsed values as a dictionary using the get_values method.
+            Get the parsed values as a list using the get_values method.
             Get the parsed type code using get_protocol_type_code.
             Get the number of bytes that were extracted as part of the message using the get_number_of_bytes_extracted method.
             Tell it to prepare for the next message using the prepare_for_next_message method after you extract these values.
@@ -223,10 +223,7 @@ def create_protocol_with_fields(type_code: int, fields = None):
     """
     if isinstance(fields, ProtocolField):
         fields = [fields]
-    if is_any_field_variable_length(fields):
-        protocol = VariableLengthMessageProtocol(type_code, fields)
-    else:
-        protocol = FixedLengthMessageProtocol(type_code, fields)
+    protocol = VariableLengthMessageProtocol(type_code, fields)
     return protocol
 
 def create_protocol(type_code: int, fields = None):
