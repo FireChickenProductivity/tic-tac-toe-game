@@ -71,8 +71,8 @@ class Server:
 
     def _create_protocol_callback_handler(self):
         self.protocol_callback_handler = protocol.ProtocolCallbackHandler()
-        self.protocol_callback_handler.register_callback_with_protocol(self.create_help_message, protocol_definitions.BASE_HELP_MESSAGE_PROTOCOL_TYPE_CODE)
-        self.protocol_callback_handler.register_callback_with_protocol(self.create_help_message, protocol_definitions.HELP_MESSAGE_PROTOCOL_TYPE_CODE)
+        self.protocol_callback_handler.register_callback_with_protocol(self.handle_default_help_message, protocol_definitions.BASE_HELP_MESSAGE_PROTOCOL_TYPE_CODE)
+        self.protocol_callback_handler.register_callback_with_protocol(self.handle_help_message, protocol_definitions.HELP_MESSAGE_PROTOCOL_TYPE_CODE)
         self.protocol_callback_handler.register_callback_with_protocol(self.handle_signin, protocol_definitions.SIGN_IN_PROTOCOL_TYPE_CODE)
         self.protocol_callback_handler.register_callback_with_protocol(self.handle_account_creation, protocol_definitions.ACCOUNT_CREATION_PROTOCOL_TYPE_CODE)
         self.protocol_callback_handler.register_callback_with_protocol(self.handle_game_creation, protocol_definitions.GAME_CREATION_PROTOCOL_TYPE_CODE)
@@ -98,8 +98,7 @@ class Server:
         message = Message(protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE, text)
         self.connection_table.send_message_to_entry(message, connection_information)
 
-    def create_help_message(self, values, connection_information):
-        label: str = values.get("text", "")
+    def create_help_message(self, label, connection_information):
         if label in help_messages:
             text = help_messages[label]
             type_code = protocol_definitions.BASE_HELP_MESSAGE_PROTOCOL_TYPE_CODE
@@ -110,19 +109,21 @@ class Server:
         message = Message(type_code, values)
         self.connection_table.send_message_to_entry(message, connection_information)
 
-    def handle_account_creation(self, values, connection_information):
+    def handle_default_help_message(self, connection_information):
+        self.create_help_message("", connection_information)
+
+    def handle_help_message(self, label, connection_information):
+        self.create_help_message(label, connection_information)
+
+    def handle_account_creation(self, username, password, connection_information):
         try:
-            username = values['username']
-            password = values['password']
             insert_account_into_database_at_path(Account(username, password), self.database_path)
             text = "Your account was successfully created with username: " + username
         except sqlite3.Error:
             text = f"The username {username} was already taken!"
         self._send_text_message(text, connection_information)
 
-    def handle_signin(self, values, connection_information):
-        username = values['username']
-        password = values['password']
+    def handle_signin(self, username, password, connection_information):
         account: Account = retrieve_account_with_name_from_database_at_path(username, self.database_path)
         if account is None or password != account.password:
             text = f"No account with username matches your password!"
@@ -133,10 +134,9 @@ class Server:
             self.usernames_to_connections[username] = connection_information
         self._send_text_message(text, connection_information)
 
-    def handle_game_creation(self, values, connection_information):
+    def handle_game_creation(self, invited_user_username, connection_information):
         creator_state = self.connection_table.get_entry_state(connection_information)
         creator_username = creator_state.username
-        invited_user_username = values["username"]
         is_game_created = self.game_handler.create_game(creator_username, invited_user_username)
         if is_game_created:
             text = "The game was created!"
@@ -146,10 +146,9 @@ class Server:
         if is_game_created:
             self._send_text_message(f"{creator_username} invited you to a game!", invited_user_username)
 
-    def handle_game_join(self, values, connection_information):
+    def handle_game_join(self, other_player_username, connection_information):
         joiner_state = self.connection_table.get_entry_state(connection_information)
         joiner_username = joiner_state.username
-        other_player_username = values["username"]
         if self.game_handler.game_exists(joiner_username, other_player_username):
             game = self.game_handler.get_game(joiner_username, other_player_username)
             if joiner_state.current_game is not None:
@@ -163,7 +162,7 @@ class Server:
             self.connection_table.send_message_to_entry(game_message, connection_information)
             self._send_text_message(f"{joiner_username} has joined your game!", other_player_username)
 
-    def handle_game_quit(self, values, connection_information):
+    def handle_game_quit(self, connection_information):
         state = self.connection_table.get_entry_state(connection_information)
         game = state.current_game
         if game is not None:
@@ -177,7 +176,7 @@ class Server:
         opponent_outcome = game.compute_player_outcome(victory_condition, opponent_username)
         self._send_message_to_opponent(player_username, Message(protocol_definitions.GAME_ENDING_PROTOCOL_TYPE_CODE, (player_username, opponent_outcome)))
 
-    def handle_game_move(self, values, connection_information):
+    def handle_game_move(self, move_number, connection_information):
         state = self.connection_table.get_entry_state(connection_information)
         game: Game = state.current_game
         if game is None:
@@ -185,7 +184,7 @@ class Server:
         elif game.get_current_turn() != state.username:
             self._send_text_message("Not your turn.", connection_information)
         else:
-            if game.make_move(state.username, values["number"]):
+            if game.make_move(state.username, move_number):
                 game_text = game.compute_text()
                 game_message = Message(protocol_definitions.GAME_UPDATE_PROTOCOL_TYPE_CODE, (game_text,))
                 other_player_username = game.compute_other_player(state.username)

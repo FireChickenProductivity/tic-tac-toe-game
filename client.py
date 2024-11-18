@@ -62,9 +62,7 @@ class Client:
         self.is_closed = False
         self.has_received_successful_message = False
 
-    def handle_game_ending(self, values):
-        opponent_username = values["opponent"]
-        outcome = values['character']
+    def handle_game_ending(self, opponent_username, outcome):
         outcome_text = 'tie'
         if outcome == game_actions.LOSS:
             outcome_text = 'loss'
@@ -75,10 +73,10 @@ class Client:
             self._reset_game_state()
             self.output_text("This game has ended.\nYou may start another game with the 'create' command and may quit the program using the 'exit' command.")
 
-    def update_game(self, values):
+    def handle_game_update(self, game_text):
         """Updates the game state"""
         self.output_text("The game board is now:")
-        self.current_game = values["text"]
+        self.current_game = game_text
         gamerow_1 = [' ',' ',' ','|',' ',' ',' ','|',' ',' ',' ']
         gamerow_2 = [' ',' ',' ','|',' ',' ',' ','|',' ',' ',' ']
         gamerow_3 = [' ',' ',' ','|',' ',' ',' ','|',' ',' ',' ']
@@ -115,25 +113,25 @@ class Client:
                          srow_2 + "\n___|___|___ b\n" +
                          srow_3 + "\n   |   |    c\n 1   2   3\n")
 
-    def update_game_piece(self, values):
+    def handle_game_piece_update(self, character):
         """Update the player's game piece"""
-        self.current_piece = values["character"]
+        self.current_piece = character
         self.output_text(f"You are playing as {self.current_piece}.")
 
-    def handle_text_message(self, values):
+    def handle_text_message(self, text):
         """Displays a text message from the server"""
-        self.output_text("Server: " + values["text"])
+        self.output_text("Server: " + text)
 
-    def handle_help_message(self, values):
+    def handle_help_message(self, text):
         """Displays a help message from the server"""
-        self.output_text("Help: " + values["text"])
+        self.output_text("Help: " + text)
 
     def _create_protocol_callback_handler(self):
         """Creates the callback handler to let the client respond to the server"""
         self.protocol_callback_handler = protocol.ProtocolCallbackHandler()
         self.protocol_callback_handler.register_callback_with_protocol(self.handle_text_message, protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE)
-        self.protocol_callback_handler.register_callback_with_protocol(self.update_game, protocol_definitions.GAME_UPDATE_PROTOCOL_TYPE_CODE)
-        self.protocol_callback_handler.register_callback_with_protocol(self.update_game_piece, protocol_definitions.GAME_PIECE_PROTOCOL_TYPE_CODE)
+        self.protocol_callback_handler.register_callback_with_protocol(self.handle_game_update, protocol_definitions.GAME_UPDATE_PROTOCOL_TYPE_CODE)
+        self.protocol_callback_handler.register_callback_with_protocol(self.handle_game_piece_update, protocol_definitions.GAME_PIECE_PROTOCOL_TYPE_CODE)
         self.protocol_callback_handler.register_callback_with_protocol(self.handle_help_message, protocol_definitions.HELP_MESSAGE_PROTOCOL_TYPE_CODE)
         self.protocol_callback_handler.register_callback_with_protocol(self.handle_help_message, protocol_definitions.BASE_HELP_MESSAGE_PROTOCOL_TYPE_CODE)
         self.protocol_callback_handler.register_callback_with_protocol(self.handle_game_ending, protocol_definitions.GAME_ENDING_PROTOCOL_TYPE_CODE)

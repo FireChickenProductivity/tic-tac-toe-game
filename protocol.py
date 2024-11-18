@@ -68,7 +68,7 @@ class MessageHandler:
     def _initialize(self, protocol = None):
         self.bytes = None
         self.protocol: MessageProtocol = protocol
-        self.values = {}
+        self.values = []
         self.field_index = -1
         self.bytes_index = 0
         self.next_expected_size = None
@@ -81,7 +81,7 @@ class MessageHandler:
             self.bytes = input_bytes
 
     def _update_values_based_on_fieldless_protocol(self):
-        self.values = {}
+        self.values = []
         self.is_done = True
 
     def _update_values_based_on_fixed_length_protocol(self):
@@ -99,14 +99,12 @@ class MessageHandler:
     def _advance_field(self):
         if self.field_index >= 0 and self.field_index < self.protocol.get_number_of_fields():
             if self.protocol.is_field_fixed_length(self.field_index):
-                name = self.protocol.compute_field_name(self.field_index)
                 value = self.protocol.unpack_fixed_length_field(
                     self.field_index,
                     self.bytes,
                     self.bytes_index
                 )
             else:
-                name = self.protocol.compute_field_name(self.field_index)
                 value = self.protocol.unpack_variable_length_field(
                     self.field_index,
                     self.next_expected_size,
@@ -114,7 +112,7 @@ class MessageHandler:
                     self.bytes_index
                 )
                 
-            self.values[name] = value
+            self.values.append(value)
             self.bytes_index += self.next_expected_size
         self.field_index += 1
         if self.field_index >= self.protocol.get_number_of_fields():
@@ -194,22 +192,13 @@ class ProtocolCallbackHandler:
         """
         self.callbacks[protocol_type_code] = callback
     
-    def pass_values_to_protocol_callback_with_connection_information(self, values, protocol_type_code, connection_information):
-        """
-            Calls the specified callback with the corresponding values and connection information
-            values: a dictionary mapping field names to values
-            protocol_type_code: the type code for the corresponding protocol
-            connection_information: information used to identify the connection involved in the message
-        """
-        return self.callbacks[protocol_type_code](values, connection_information)
-
     def pass_values_to_protocol_callback(self, values, protocol_type_code):
         """
             Calls the specified callback with the corresponding values
-            values: a dictionary mapping field names to values
+            values: a list of values to pass to the callback in order
             protocol_type_code: the type code for the corresponding protocol
         """
-        return self.callbacks[protocol_type_code](values)
+        return self.callbacks[protocol_type_code](*values)
 
     def has_protocol(self, protocol_type_code):
         """

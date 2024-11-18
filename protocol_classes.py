@@ -72,13 +72,12 @@ class FixedLengthMessageProtocol(MessageProtocol):
         """
             Unpacks bytes corresponding to the protocol excluding the type code at the beginning into the contained values
             input_bytes: bytes for a message corresponding to the protocol excluding the type code
-            returns: a dictionary mapping field names to the corresponding values
+            returns: a list of unpacked values in the same order as the fields
         """
-        results = {}
+        results = []
         values = struct.unpack(self.compute_fields_string(), input_bytes)
         for i in range(len(values)):
-            name = self.fields[i].get_name()
-            results[name] = decode_value(values[i])
+            results.append(decode_value(values[i]))
         return results
 
     def get_type_code(self):
