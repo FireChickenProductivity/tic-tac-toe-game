@@ -43,9 +43,9 @@ class TypeCodeOnlyMessageProtocol(MessageProtocol):
         """Returns a message for the protocol containing only the type code"""
         return pack_type_code(self.type_code)
 
-class VariableLengthMessageProtocol(MessageProtocol):
+class MessageProtocolWithFields(MessageProtocol):
     """
-        Defines a variable length message protocol
+        Defines a message protocol that has fields
         type_code: the type code for the protocol
         fields: the fields corresponding to the protocol
     """

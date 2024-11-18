@@ -215,7 +215,7 @@ def create_protocol_with_fields(type_code: int, fields = None):
     """
     if isinstance(fields, ProtocolField):
         fields = [fields]
-    protocol = VariableLengthMessageProtocol(type_code, fields)
+    protocol = MessageProtocolWithFields(type_code, fields)
     return protocol
 
 def create_protocol(type_code: int, fields = None):
