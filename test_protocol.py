@@ -69,7 +69,7 @@ class TestSingleFieldFixedLengthProtocol(unittest.TestCase):
     def test_can_correctly_unpack_message(self):
         protocol = self._create_protocol()
         input_bytes = struct.pack(">B", 100)
-        expected_result = {'number': 100}
+        expected_result = [100]
         actual_result = protocol.unpack(input_bytes)
         self.assertEqual(expected_result, actual_result)
 
@@ -109,13 +109,13 @@ class TestComplexVariableLengthMessageProtocol(unittest.TestCase):
         encoded_name = encode_text(name)
         encoded_password = encode_text(password)
         packing = struct.pack(">BH16sB100sB", 2, 16, encoded_name, 100, encoded_password, game_type)
-        values = {'name': name, 'password': password, 'type': game_type}
+        values = [name, password, game_type]
         return packing, values
 
     def test_can_correctly_pack_values(self):
         protocol = self._create_protocol()
         expected, values = self._create_packed_example()
-        actual = protocol.pack(values['name'], values['password'], values['type'])
+        actual = protocol.pack(*values)
         self.assertEqual(expected, actual)
 
     def test_can_correctly_unpack_values(self):
@@ -126,8 +126,7 @@ class TestComplexVariableLengthMessageProtocol(unittest.TestCase):
         message_handler.receive_bytes(packing)
         values = message_handler.get_values()
         self.assertEqual(len(expected), len(values))
-        for key in expected:
-            self.assertEqual(expected[key], values[key])
+        self.assertEqual(expected, values)
         self.assertTrue(message_handler.is_done_obtaining_values())
 
 class TestMultipleFieldFixedLengthMessageProtocol(unittest.TestCase):
@@ -150,14 +149,14 @@ class TestMultipleFieldFixedLengthMessageProtocol(unittest.TestCase):
     def _create_pack_and_values(self):
         first_value = 90
         second_value = 0
-        values = {"1": first_value, "2": second_value}
+        values = [first_value, second_value]
         packing = struct.pack(">BBB", 100, first_value, second_value)
         return packing, values
 
     def test_can_pack_values_correctly(self):
         message_protocol = self._compute_protocol()
         expected, values = self._create_pack_and_values()
-        actual = message_protocol.pack(values["1"], values["2"])
+        actual = message_protocol.pack(*values)
         self.assertEqual(expected, actual)
 
     def test_can_unpack_values_correctly(self):
@@ -166,12 +165,6 @@ class TestMultipleFieldFixedLengthMessageProtocol(unittest.TestCase):
         pack = pack[1:]
         actual = message_protocol.unpack(pack)
         self.assertEqual(expected, actual)
-
-def create_values_dictionary(values, names):
-    result = {}
-    for i in range(len(values)):
-        result[names[i]] = values[i]
-    return result
 
 class TestMessageHandler(unittest.TestCase):
     def _create_protocol_map(self):
@@ -203,7 +196,7 @@ class TestMessageHandler(unittest.TestCase):
             packing = protocol_map.pack_values_given_type_code(i, *values[i])
             message_handler.receive_bytes(packing)
             self.assertTrue(message_handler.is_done_obtaining_values())
-            expected = create_values_dictionary(values[i], names[i])
+            expected = values[i]
             actual = message_handler.get_values()
             self.assertEqual(expected, actual)
             expected_type_code = i
@@ -220,7 +213,7 @@ class TestMessageHandler(unittest.TestCase):
                 self.assertFalse(message_handler.is_done_obtaining_values(), f"Failed on iteration {i}")
                 message_handler.receive_bytes(byte)
             self.assertTrue(message_handler.is_done_obtaining_values())
-            expected = create_values_dictionary(values[i], names[i])
+            expected = values[i]
             actual = message_handler.get_values()
             self.assertEqual(expected, actual)
             expected_type_code = i
@@ -278,7 +271,7 @@ class TestNineCharacterSingleStringMessageProtocol(unittest.TestCase):
         text_protocol = self._create_protocol()
         input_text = "XO       "
         input_bytes = struct.pack(">B9s", 5, input_text.encode())
-        unpacked = text_protocol.unpack(input_bytes[1:])["text"]
+        unpacked = text_protocol.unpack(input_bytes[1:])[0]
         self.assertEqual(unpacked, input_text)
         type_code = protocol.unpack_type_code_from_message(input_bytes)
         self.assertEqual(type_code, 5)
@@ -298,7 +291,7 @@ class TestSingleCharacterStringMessageProtocol(unittest.TestCase):
         text_protocol = self._create_protocol()
         input_text = "X"
         input_bytes = struct.pack(">Bs", 2, input_text.encode())
-        unpacked = text_protocol.unpack(input_bytes[1:])["character"]
+        unpacked = text_protocol.unpack(input_bytes[1:])[0]
         self.assertEqual(unpacked, input_text)
         type_code = protocol.unpack_type_code_from_message(input_bytes)
         self.assertEqual(type_code, 2)
