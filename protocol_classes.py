@@ -15,10 +15,6 @@ class MessageProtocol:
         """Packs values into a message conforming to the protocol"""
         pass
 
-    def is_fixed_length(self):
-        """Returns true if the protocol is for fixed length messages and false otherwise"""
-        return True
-    
     def get_number_of_fields(self):
         """Returns the number of fields supported by the protocol"""
         pass
@@ -57,10 +53,6 @@ class MessageProtocolWithFields(MessageProtocol):
         """Returns the type code for the message protocol"""
         return self.type_code
 
-    def is_fixed_length(self):
-        """Returns false to indicate that this is not a fixed length message protocol"""
-        return False
-    
     def pack(self, *args):
         """Pacs values into a message conforming to the protocol"""
         args = [encode_value(value) for value in args]

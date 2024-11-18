@@ -21,10 +21,6 @@ class TestMessageProtocol(unittest.TestCase):
         protocol = self._create_protocol()
         self.assertEqual(protocol.get_type_code(), 0)
 
-    def test_protocol_is_not_fixed_length(self):
-        protocol = self._create_protocol()
-        self.assertFalse(protocol.is_fixed_length())
-
     def test_correctly_unpacks_field_length(self):
         field_length = struct.pack(">H", 20)
         protocol = self._create_protocol()
