@@ -6,17 +6,17 @@ import unittest
 from testing_utilities import *
 
 def create_text_message(text: str):
-    return Message(protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE, {"text": text})
+    return Message(protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE, [text])
 
-EMPTY_GAME_BOARD = {'text': " "*9}
+EMPTY_GAME_BOARD = [" "*9]
 EMPTY_GAME_BOARD_MESSAGE = Message(protocol_definitions.GAME_UPDATE_PROTOCOL_TYPE_CODE, EMPTY_GAME_BOARD)
-PLAYING_X_MESSAGE = Message(protocol_definitions.GAME_PIECE_PROTOCOL_TYPE_CODE, {"character": "X"})
-PLAYING_O_MESSAGE = Message(protocol_definitions.GAME_PIECE_PROTOCOL_TYPE_CODE, {"character": "O"})
+PLAYING_X_MESSAGE = Message(protocol_definitions.GAME_PIECE_PROTOCOL_TYPE_CODE, ["X"])
+PLAYING_O_MESSAGE = Message(protocol_definitions.GAME_PIECE_PROTOCOL_TYPE_CODE, ["O"])
 GAME_CREATION_MESSAGE = create_text_message("The game was created!")
 
 class TestMocking(unittest.TestCase):
     def test_can_send_messages_back_and_forth(self):
-        expected_message = Message(0, {'text': help_messages[""]})
+        expected_message = Message(0, [help_messages[""]])
         testcase = TestCase()
         testcase.create_client("Bob")
         testcase.buffer_client_command("Bob", "help")
