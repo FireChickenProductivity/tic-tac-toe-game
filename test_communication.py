@@ -21,30 +21,39 @@ PLAYING_X_MESSAGE = Message(protocol_definitions.GAME_PIECE_PROTOCOL_TYPE_CODE, 
 PLAYING_O_MESSAGE = Message(protocol_definitions.GAME_PIECE_PROTOCOL_TYPE_CODE, ["O"])
 GAME_CREATION_MESSAGE = create_text_message("The game was created!")
 
-class PlayerMessages:
+class PlayerCommands:
     def __init__(self, initial_count):
         self.initial_count = initial_count
-        self.messages = []
+        self.commands = []
 
-    def insert_message(self, message):
+    def insert_command(self, command):
         self.initial_count += 1
-        for buffer_message in (message, self.initial_count):
-            self.messages.append(buffer_message)
+        for buffer_command in (command, self.initial_count):
+            self.commands.append(buffer_command)
 
-    def get_messages(self):
-        return self.messages
+    def get_commands(self):
+        return self.commands
+
+ROW_CHARACTERS = {1: 'a', 2: 'b', 3: 'c', '': ''}
 
 def compute_game_playing_actions_creating_board_state(state: str, initial_x_player_message_count, initial_o_player_message_count):
-    x_messages = PlayerMessages(initial_x_player_message_count)
-    o_messages = PlayerMessages(initial_o_player_message_count)
-    for index, character in enumerate(state):
-        move_number = index + 1
-        message = create_move_message(move_number)
+    x_messages = PlayerCommands(initial_x_player_message_count)
+    o_messages = PlayerCommands(initial_o_player_message_count)
+    row_number = 1
+    column_number = 0
+    row = ROW_CHARACTERS[row_number]
+    for character in state:
+        column_number += 1
+        if column_number > 3:
+            row_number += 1
+            column_number = 1
+            row = ROW_CHARACTERS[row_number]
+        command = "move " + row + str(column_number)
         if character == 'X':
-            x_messages.insert_message(message)
+            x_messages.insert_command(command)
         elif character == 'O':
-            o_messages.insert_message(message)
-    return [messages.get_messages() for messages in (x_messages, o_messages)]
+            o_messages.insert_command(command)
+    return [messages.get_commands() for messages in (x_messages, o_messages)]
 
 def compute_sequential_game_playing_update_messages_for_player(state, player_piece):
     messages = []
