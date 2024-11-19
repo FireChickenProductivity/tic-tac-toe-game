@@ -27,7 +27,7 @@ class PlayerCommands:
         self.commands = []
 
     def insert_command(self, command):
-        self.initial_count += 1
+        self.initial_count += 2
         for buffer_command in (command, self.initial_count):
             self.commands.append(buffer_command)
 
@@ -157,7 +157,7 @@ class TestMocking(unittest.TestCase):
         testcase.create_client("Alice")
         bob_commands = ["create Alice", 3, 'join Alice', bob_messages_number_before_game_starts]
         bob_commands.extend(bob_move_commands)
-        alice_commands = [2, 'join Bob', alice_move_commands]
+        alice_commands = [2, 'join Bob', alice_messages_number_before_game_starts]
         alice_commands.extend(alice_move_commands)
         testcase.buffer_client_commands("Bob", bob_commands)
         testcase.buffer_client_commands("Alice", alice_commands)
