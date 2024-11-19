@@ -339,6 +339,9 @@ class TestCase:
     def get_output(self, user_name):
         return self.clients[user_name].get_output()
 
+    def get_server_log(self, category: str = None):
+        return self.server.get_log(category)
+
     def do_event_log_items_match(self, expected, actual: connection_handler.MessageEvent):
         if isinstance(expected, connection_handler.MessageEvent):
             return expected == actual
@@ -356,8 +359,11 @@ class TestCase:
             if not matching_function(value, actual[index]):
                 error_message += f"Values at index {index} did not match:\n{value}\n{actual[index]}\n"
         if len(expected) != len(actual):
-            error_message += f"Lengths did not match! actual: {len(actual)} expected: {len(expected)}\n"
+            error_message += f"Lengths did not match! actual: {len(actual)} expected: {len(expected)}\nActual list: {actual}"
         if error_message != "":
+            error_message += f"\nServer log: {self.get_server_log()}"
+            for client_name in self.clients:
+                error_message += f"\n{client_name} log: {self.get_log(client_name)}"
             raise Exception(error_message)
 
     def assert_values_match_log(self, values, user_name, category=None):

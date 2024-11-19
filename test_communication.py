@@ -144,8 +144,12 @@ class TestMocking(unittest.TestCase):
         board_state_update_messages = compute_sequential_game_playing_update_messages(final_state)
         testcase.create_client("Bob")
         testcase.create_client("Alice")
-        testcase.buffer_client_commands("Bob", ["create Alice", 3, 'join Alice', bob_messages_number_before_game_starts] + bob_move_commands)
-        testcase.buffer_client_commands("Alice", [2, 'join Bob', alice_messages_number_before_game_starts] + alice_move_commands)
+        bob_commands = ["create Alice", 3, 'join Alice', bob_messages_number_before_game_starts]
+        bob_commands.extend(bob_move_commands)
+        alice_commands = [2, 'join Bob', alice_messages_number_before_game_starts]
+        alice_commands.extend(alice_move_commands)
+        testcase.buffer_client_commands("Bob", bob_commands)
+        testcase.buffer_client_commands("Alice", alice_commands)
         expected_bob_messages = [
             SkipItem(),
             GAME_CREATION_MESSAGE,
