@@ -198,7 +198,6 @@ class ConnectionHandler:
             values = []
             values.extend(request.values)
             values.append(self.connection_information)
-            print('values', values)
         else:
             values = request.values
         self.callback_handler.pass_values_to_protocol_callback(values, request.type_code)

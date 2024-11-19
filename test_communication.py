@@ -159,7 +159,7 @@ class TestMocking(unittest.TestCase):
             PLAYING_O_MESSAGE,
             EMPTY_GAME_BOARD_MESSAGE,
         ] + board_state_update_messages
-        testcase.assert_received_values_match_log(expected_alice_messages, "Alice")
         testcase.assert_received_values_match_log(expected_bob_messages, 'Bob')
+        testcase.assert_received_values_match_log(expected_alice_messages, "Alice")
 if __name__ == '__main__':
     unittest.main()
