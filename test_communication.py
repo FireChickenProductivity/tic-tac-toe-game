@@ -34,19 +34,19 @@ class PlayerMessages:
     def get_messages(self):
         return self.messages
 
-def compute_game_playing_actions_creating_board_state(state: str, initial_x_player_message_count, initial_y_player_message_count):
+def compute_game_playing_actions_creating_board_state(state: str, initial_x_player_message_count, initial_o_player_message_count):
     x_messages = PlayerMessages(initial_x_player_message_count)
-    y_messages = PlayerMessages(initial_y_player_message_count)
+    o_messages = PlayerMessages(initial_o_player_message_count)
     for index, character in enumerate(state):
         move_number = index + 1
         message = create_move_message(move_number)
         if character == 'X':
             x_messages.insert_message(message)
         elif character == 'O':
-            y_messages.insert_message(message)
-    return [messages.get_messages() for messages in (x_messages, y_messages)]
+            o_messages.insert_message(message)
+    return [messages.get_messages() for messages in (x_messages, o_messages)]
 
-def compute_sequential_game_playing_update_messages(state, player_piece):
+def compute_sequential_game_playing_update_messages_for_player(state, player_piece):
     messages = []
     for i in range(len(state)):
         character = state[i]
@@ -57,12 +57,12 @@ def compute_sequential_game_playing_update_messages(state, player_piece):
 
 def compute_sequential_game_playing_update_messages(state: str):
     messages = []
-    x_messages = compute_sequential_game_playing_update_messages(state, 'X')
-    y_messages = compute_sequential_game_playing_update_messages(state, 'Y')
-    for i in range(len(y_messages)):
+    x_messages = compute_sequential_game_playing_update_messages_for_player(state, 'X')
+    o_messages = compute_sequential_game_playing_update_messages_for_player(state, 'O')
+    for i in range(len(o_messages)):
         messages.append(x_messages[i])
-        messages.append(y_messages[i])
-    if len(x_messages) > len(y_messages):
+        messages.append(o_messages[i])
+    if len(x_messages) > len(o_messages):
         messages.append(x_messages[-1])
     return messages
 
@@ -134,16 +134,18 @@ class TestMocking(unittest.TestCase):
     def test_gameplay(self):
         testcase = TestCase(should_perform_automatic_login=True)
         final_state = "XOOXO X"
+        bob_messages_number_before_game_starts = 5
+        alice_messages_number_before_game_starts = 4
         bob_move_commands, alice_move_commands = compute_game_playing_actions_creating_board_state(
             final_state,
-            5,
-            6
+            bob_messages_number_before_game_starts,
+            alice_messages_number_before_game_starts
         )
         board_state_update_messages = compute_sequential_game_playing_update_messages(final_state)
         testcase.create_client("Bob")
         testcase.create_client("Alice")
-        testcase.buffer_client_commands("Bob", ["create Alice", 3, 'join Alice', 5] + bob_move_commands)
-        testcase.buffer_client_commands("Alice", [2, 'join Bob', 5] + alice_move_commands)
+        testcase.buffer_client_commands("Bob", ["create Alice", 3, 'join Alice', bob_messages_number_before_game_starts] + bob_move_commands)
+        testcase.buffer_client_commands("Alice", [2, 'join Bob', alice_messages_number_before_game_starts] + alice_move_commands)
         expected_bob_messages = [
             SkipItem(),
             GAME_CREATION_MESSAGE,
@@ -152,9 +154,12 @@ class TestMocking(unittest.TestCase):
             EMPTY_GAME_BOARD_MESSAGE,
         ] + board_state_update_messages
         expected_alice_messages = [
-            SkipItem(),create_text_message("Bob invited you to a game!"),
+            SkipItem(),
+            create_text_message("Bob invited you to a game!"),
             PLAYING_O_MESSAGE,
             EMPTY_GAME_BOARD_MESSAGE,
         ] + board_state_update_messages
+        testcase.assert_received_values_match_log(expected_alice_messages, "Alice")
+        testcase.assert_received_values_match_log(expected_bob_messages, 'Bob')
 if __name__ == '__main__':
     unittest.main()
