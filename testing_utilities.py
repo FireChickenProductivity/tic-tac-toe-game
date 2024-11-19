@@ -364,6 +364,7 @@ class TestCase:
             error_message += f"\nServer log: {self.get_server_log()}"
             for client_name in self.clients:
                 error_message += f"\n{client_name} log: {self.get_log(client_name)}"
+                error_message += f"\nsending log: {self.get_log(client_name, connection_handler.SENDING_MESSAGE_LOG_CATEGORY)}"
             raise Exception(error_message)
 
     def assert_values_match_log(self, values, user_name, category=None):

@@ -144,9 +144,9 @@ class TestMocking(unittest.TestCase):
         board_state_update_messages = compute_sequential_game_playing_update_messages(final_state)
         testcase.create_client("Bob")
         testcase.create_client("Alice")
-        bob_commands = ["create Alice", 3, 'join Alice', bob_messages_number_before_game_starts]
+        bob_commands = ["create Alice", 3]
         bob_commands.extend(bob_move_commands)
-        alice_commands = [2, 'join Bob', alice_messages_number_before_game_starts]
+        alice_commands = [2, 'join Bob']
         alice_commands.extend(alice_move_commands)
         testcase.buffer_client_commands("Bob", bob_commands)
         testcase.buffer_client_commands("Alice", alice_commands)
@@ -163,6 +163,7 @@ class TestMocking(unittest.TestCase):
             PLAYING_O_MESSAGE,
             EMPTY_GAME_BOARD_MESSAGE,
         ] + board_state_update_messages
+        testcase.run()
         testcase.assert_received_values_match_log(expected_bob_messages, 'Bob')
         testcase.assert_received_values_match_log(expected_alice_messages, "Alice")
 if __name__ == '__main__':
