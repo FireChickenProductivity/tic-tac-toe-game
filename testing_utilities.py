@@ -74,6 +74,8 @@ class TestClientHandler:
 
     def perform_command(self, command: str):
         request = self.client.create_request_from_text_input(command)
+        if request is None:
+            raise ValueError(f"Client {self.credentials.username} received invalid command {command}")
         self.client.send_message(request)
 
     def send_message(self, message):

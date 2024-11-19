@@ -153,7 +153,7 @@ class TestMocking(unittest.TestCase):
         board_state_update_messages = compute_sequential_game_playing_update_messages(final_state)
         testcase.create_client("Bob")
         testcase.create_client("Alice")
-        bob_commands = ["create Alice", 3]
+        bob_commands = ["create Alice", 3, 'join Alice', 5]
         bob_commands.extend(bob_move_commands)
         alice_commands = [2, 'join Bob']
         alice_commands.extend(alice_move_commands)
