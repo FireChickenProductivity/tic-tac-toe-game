@@ -12,8 +12,8 @@ def create_game_update_message(text: str):
     EMPTY_GAME_BOARD_MESSAGE = Message(protocol_definitions.GAME_UPDATE_PROTOCOL_TYPE_CODE, text)
     return EMPTY_GAME_BOARD_MESSAGE
 
-def create_move_message(move_number):
-    return Message(protocol_definitions.GAME_UPDATE_PROTOCOL_TYPE_CODE, move_number)
+def create_move_message(move_information):
+    return Message(protocol_definitions.GAME_UPDATE_PROTOCOL_TYPE_CODE, [move_information])
     
 EMPTY_GAME_BOARD = [" "*9]
 EMPTY_GAME_BOARD_MESSAGE = create_game_update_message(EMPTY_GAME_BOARD)
@@ -57,10 +57,12 @@ def compute_game_playing_actions_creating_board_state(state: str, initial_x_play
 
 def compute_sequential_game_playing_update_messages_for_player(state, player_piece):
     messages = []
-    for i in range(len(state)):
-        character = state[i]
+    partial_state = ""
+    for character in state:
+        partial_state += character
         if character == player_piece:
-            message = create_move_message(i + 1)
+            unfinished_state = partial_state + " "*(9 - len(partial_state))
+            message = create_move_message(unfinished_state)
             messages.append(message)
     return messages
 
@@ -144,7 +146,7 @@ class TestMocking(unittest.TestCase):
         testcase = TestCase(should_perform_automatic_login=True)
         final_state = "XOOXO X"
         bob_messages_number_before_game_starts = 5
-        alice_messages_number_before_game_starts = 4
+        alice_messages_number_before_game_starts = 6
         bob_move_commands, alice_move_commands = compute_game_playing_actions_creating_board_state(
             final_state,
             bob_messages_number_before_game_starts,
@@ -153,9 +155,9 @@ class TestMocking(unittest.TestCase):
         board_state_update_messages = compute_sequential_game_playing_update_messages(final_state)
         testcase.create_client("Bob")
         testcase.create_client("Alice")
-        bob_commands = ["create Alice", 3, 'join Alice', 5]
+        bob_commands = ["create Alice", 3, 'join Alice', bob_messages_number_before_game_starts]
         bob_commands.extend(bob_move_commands)
-        alice_commands = [2, 'join Bob']
+        alice_commands = [2, 'join Bob', alice_move_commands]
         alice_commands.extend(alice_move_commands)
         testcase.buffer_client_commands("Bob", bob_commands)
         testcase.buffer_client_commands("Alice", alice_commands)
@@ -171,6 +173,7 @@ class TestMocking(unittest.TestCase):
             create_text_message("Bob invited you to a game!"),
             PLAYING_O_MESSAGE,
             EMPTY_GAME_BOARD_MESSAGE,
+            create_text_message("Bob has joined your game!"),
         ] + board_state_update_messages
         testcase.run()
         testcase.assert_received_values_match_log(expected_bob_messages, 'Bob')
