@@ -113,9 +113,9 @@ class MessageHandler:
             self.is_done = True
         else:
             self._update_next_expected_size()
-            self._update_values_based_on_variable_length_protocol()
+            self._update_values_based_on_message_protocol_with_fields()
 
-    def _update_values_based_on_variable_length_protocol(self):
+    def _update_values_based_on_message_protocol_with_fields(self):
         if self.field_index < 0:
             self._advance_field()
         number_of_new_bytes = len(self.bytes) - self.bytes_index
@@ -129,13 +129,13 @@ class MessageHandler:
                 self.bytes_index
             )
             self.bytes_index += self.protocol.compute_variable_length_field_max_size(self.field_index)
-            self._update_values_based_on_variable_length_protocol()
+            self._update_values_based_on_message_protocol_with_fields()
 
     def _update_values(self):
         if self.protocol.get_number_of_fields() == 0:
             self._update_values_based_on_fieldless_protocol()
         else:
-            self._update_values_based_on_variable_length_protocol()
+            self._update_values_based_on_message_protocol_with_fields()
 
     def receive_bytes(self, input_bytes):
         if self.protocol:
