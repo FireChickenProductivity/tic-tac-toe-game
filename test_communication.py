@@ -173,9 +173,8 @@ class TestMocking(unittest.TestCase):
         testcase.assert_received_values_match_log(expected_alice_messages, "Alice")
         testcase.assert_received_values_match_log(expected_bob_messages, 'Bob')
 
-    def test_gameplay(self):
+    def perform_gameplay_test(self, final_state, expected_first_player_outcome, expected_second_player_outcome):
         testcase = TestCase(should_perform_automatic_login=True)
-        final_state = "XOOX  X  "
         bob_messages_number_before_game_starts = 5
         alice_messages_number_before_game_starts = 6
         bob_move_commands, alice_move_commands = compute_game_playing_actions_creating_board_state(
@@ -199,7 +198,7 @@ class TestMocking(unittest.TestCase):
             PLAYING_X_MESSAGE,
             EMPTY_GAME_BOARD_MESSAGE,
         ] + board_state_update_messages
-        expected_bob_messages.append(create_victory_message("Alice"))
+        expected_bob_messages.append(create_result_message("Alice", expected_first_player_outcome))
         expected_alice_messages = [
             SkipItem(),
             create_text_message("Bob invited you to a game!"),
@@ -207,9 +206,13 @@ class TestMocking(unittest.TestCase):
             EMPTY_GAME_BOARD_MESSAGE,
             create_text_message("Bob has joined your game!"),
         ] + board_state_update_messages
-        expected_alice_messages.append(create_loss_message("Bob"))
+        expected_alice_messages.append(create_result_message("Bob", expected_second_player_outcome))
         testcase.run()
         testcase.assert_received_values_match_log(expected_bob_messages, 'Bob')
         testcase.assert_received_values_match_log(expected_alice_messages, "Alice")
+
+    def test_gameplay(self):
+        self.perform_gameplay_test("XOOX  X  ", game_actions.VICTORY, game_actions.LOSS)
+
 if __name__ == '__main__':
     unittest.main()
