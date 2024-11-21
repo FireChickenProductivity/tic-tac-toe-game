@@ -1,13 +1,22 @@
 from packing_utilities import *
 from protocol_type_codes import *
+from protocol_fields import ProtocolField
 
 class MessageProtocol:
     """
         A message protocol object defines how to convert between values associated with a message for the protocol
-        type_code: the type code for the protocol
-        fields: the fields corresponding to the protocol
+        type_code: an integer number used to distinguish between different message protocols. 
+        Every MessageProtocol objects should have a unique type code.
+        The type code is sent with every message conforming to the protocol.
+        fields: an optional list of fields or a single field. 
+        Every field object defines the type of value that should go in the field
+        as well as the number of bytes the field can have. 
     """
-    def __init__(self, type_code, fields):
+    def __init__(self, type_code, fields=None):
+        if not fields:
+            fields = []
+        elif isinstance(fields, ProtocolField):
+            fields = [fields]
         self.type_code = type_code
         self.fields = fields
     

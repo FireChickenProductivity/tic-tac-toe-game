@@ -200,44 +200,12 @@ class ProtocolCallbackHandler:
         """
         return protocol_type_code in self.callbacks
 
-def is_any_field_variable_length(fields):
-    """Returns true if any of the fields passed to it are fixed length"""
-    for field in fields:
-        if not field.is_fixed_length():
-            return True
-    return False
-
-def create_protocol_with_fields(type_code: int, fields = None):
-    """
-        Returns a MessageProtocol object with the specified type code and fields
-        type_code: an integer number used to distinguish between different message protocols.
-        fields: a list of protocol fields
-    """
-    if isinstance(fields, ProtocolField):
-        fields = [fields]
-    protocol = MessageProtocol(type_code, fields)
-    return protocol
-
-def create_protocol(type_code: int, fields = None):
-    """
-        Creates a MessageProtocol object using a type code and optional fields. 
-        type_code: an integer number used to distinguish between different message protocols. 
-        Every MessageProtocol objects should have a unique type code.
-        The type code is sent with every message conforming to the protocol.
-        fields: an optional list of fields or a single field. 
-        Every field object defines the type of value that should go in the field
-        as well as the number of bytes the field can have. 
-    """
-    if not fields:
-        fields = []
-    return create_protocol_with_fields(type_code, fields)
-
 def create_text_message_protocol(type_code: int):
     """
         Returns a message protocol with the specified type code for messages having a single variable length string field
     """
     field = create_string_protocol_field("text", 2)
-    protocol = create_protocol(type_code, field)
+    protocol = MessageProtocol(type_code, field)
     return protocol
 
 def create_single_byte_nonnegative_integer_message_protocol(type_code: int):
@@ -245,7 +213,7 @@ def create_single_byte_nonnegative_integer_message_protocol(type_code: int):
         Returns a message protocol with the specified type code for messages having a single nonnegative single byte integer field
     """
     field = create_single_byte_nonnegative_integer_protocol_field('number')
-    protocol = create_protocol(type_code, field)
+    protocol = MessageProtocol(type_code, field)
     return protocol
 
 def create_username_and_password_message_protocol(type_code: int):
@@ -254,7 +222,7 @@ def create_username_and_password_message_protocol(type_code: int):
     """
     user_name_field = create_string_protocol_field("username", 1)
     password_field = create_string_protocol_field("password", 1)
-    protocol = create_protocol(type_code, ((user_name_field, password_field)))
+    protocol = MessageProtocol(type_code, ((user_name_field, password_field)))
     return protocol
 
 def create_username_message_protocol(type_code: int):
@@ -262,7 +230,7 @@ def create_username_message_protocol(type_code: int):
         Returns a message protocol for communicating a username
     """
     user_name_field = creates_single_byte_length_field_string_protocol_field("username")
-    protocol = create_protocol(type_code, user_name_field)
+    protocol = MessageProtocol(type_code, user_name_field)
     return protocol
 
 def create_fixed_length_string_message_protocol(type_code: int, length: int, field_name: str='text'):
@@ -273,7 +241,7 @@ def create_fixed_length_string_message_protocol(type_code: int, length: int, fie
         field_name: the name of the fixed length string's field
     """
     field = create_fixed_length_string_protocol_field(field_name, length)
-    protocol = create_protocol(type_code, field)
+    protocol = MessageProtocol(type_code, field)
     return protocol
 
 def create_nine_character_single_string_message_protocol(type_code: int):
@@ -294,4 +262,4 @@ def create_username_and_single_character_message_protocol(type_code: int):
     """
     username_field = create_string_protocol_field('opponent', 1)
     single_character_field = create_single_character_string_protocol_field("character")
-    return create_protocol(type_code, [username_field, single_character_field])
+    return MessageProtocol(type_code, [username_field, single_character_field])

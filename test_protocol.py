@@ -171,7 +171,7 @@ class TestMessageHandler(unittest.TestCase):
         bigger_fixed_length_field = protocol.ConstantLengthProtocolField('big', "2s", 2)
         small_field = protocol.create_single_byte_nonnegative_integer_protocol_field('small')
         fixed_length_protocol = protocol.MessageProtocol(1, [bigger_fixed_length_field, small_field])
-        fieldless_protocol = protocol.create_protocol(2)
+        fieldless_protocol = protocol.MessageProtocol(2)
         protocol_map = protocol.ProtocolMap([variable_length_protocol, fixed_length_protocol, fieldless_protocol])
         return protocol_map
 
@@ -223,7 +223,7 @@ class TestMessageHandler(unittest.TestCase):
 
 class TestTypeCodeOnlyMessageProtocol(unittest.TestCase):
     def _create_protocol(self):
-        return protocol.create_protocol(9)
+        return protocol.MessageProtocol(9)
 
     def test_returns_correct_type_code(self):
         expected = 9
