@@ -217,5 +217,8 @@ class TestMocking(unittest.TestCase):
     def test_tie(self):
         self.perform_gameplay_test("XOXOOXXXO", game_actions.TIE, game_actions.TIE)
 
+    def test_first_player_loss(self):
+        self.perform_gameplay_test("OXXXO   O", game_actions.LOSS, game_actions.VICTORY)
+
 if __name__ == '__main__':
     unittest.main()
