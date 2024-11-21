@@ -1,6 +1,7 @@
 from server import Server, help_messages
 import protocol_definitions
 from protocol import Message
+import game_actions
 import connection_handler
 import unittest
 from testing_utilities import *
@@ -14,7 +15,19 @@ def create_game_update_message(text: str):
 
 def create_move_message(move_information):
     return Message(protocol_definitions.GAME_UPDATE_PROTOCOL_TYPE_CODE, [move_information])
-    
+
+def create_result_message(username, result):
+    return Message(protocol_definitions.GAME_ENDING_PROTOCOL_TYPE_CODE, [username, result])
+
+def create_victory_message(username):
+    return create_result_message(username, game_actions.VICTORY)
+
+def create_tie_message(username):
+    return create_result_message(username, game_actions.TIE)
+
+def create_loss_message(username):
+    return create_result_message(username, game_actions.LOSS)
+
 EMPTY_GAME_BOARD = [" "*9]
 EMPTY_GAME_BOARD_MESSAGE = create_game_update_message(EMPTY_GAME_BOARD)
 PLAYING_X_MESSAGE = Message(protocol_definitions.GAME_PIECE_PROTOCOL_TYPE_CODE, ["X"])
@@ -55,26 +68,44 @@ def compute_game_playing_actions_creating_board_state(state: str, initial_x_play
             o_messages.insert_command(command)
     return [messages.get_commands() for messages in (x_messages, o_messages)]
 
-def compute_sequential_game_playing_update_messages_for_player(state, player_piece):
-    messages = []
-    partial_state = ""
-    for character in state:
-        partial_state += character
-        if character == player_piece:
-            unfinished_state = partial_state + " "*(9 - len(partial_state))
-            message = create_move_message(unfinished_state)
-            messages.append(message)
-    return messages
+
+
+def compute_player_indices(state, player_piece):
+    return [index for index in range(len(state)) if player_piece == state[index]]
+
+class MoveIndices:
+    def __init__(self, piece: str, state: str):
+        self.indices = compute_player_indices(state, piece)
+        self.piece = piece
+    
+    def get_index(self, index):
+        return self.indices[index]
+    
+    def get_piece(self):
+        return self.piece
+    
+    def get_last_index(self):
+        return self.get_index(-1)
+
+    def __len__(self):
+        return len(self.indices)
+
+def compute_next_partial_state(partial_state, piece, index):
+    return partial_state[:index] + piece + partial_state[index + 1:]
 
 def compute_sequential_game_playing_update_messages(state: str):
     messages = []
-    x_messages = compute_sequential_game_playing_update_messages_for_player(state, 'X')
-    o_messages = compute_sequential_game_playing_update_messages_for_player(state, 'O')
-    for i in range(len(o_messages)):
-        messages.append(x_messages[i])
-        messages.append(o_messages[i])
-    if len(x_messages) > len(o_messages):
-        messages.append(x_messages[-1])
+    partial_state = " "*9
+    x_indices = MoveIndices('X', state)
+    o_indices = MoveIndices('O', state)
+    for i in range(len(o_indices)):
+        for indices in (x_indices, o_indices):
+            index = indices.get_index(i)
+            partial_state = compute_next_partial_state(partial_state, indices.get_piece(), index)
+            messages.append(create_move_message(partial_state))
+    if len(x_indices) > len(o_indices):
+        partial_state = compute_next_partial_state(partial_state, x_indices.get_piece(), x_indices.get_last_index())
+        messages.append(create_move_message(partial_state))
     return messages
 
 class TestMocking(unittest.TestCase):
@@ -144,7 +175,7 @@ class TestMocking(unittest.TestCase):
 
     def test_gameplay(self):
         testcase = TestCase(should_perform_automatic_login=True)
-        final_state = "XOOXO X"
+        final_state = "XOOX  X  "
         bob_messages_number_before_game_starts = 5
         alice_messages_number_before_game_starts = 6
         bob_move_commands, alice_move_commands = compute_game_playing_actions_creating_board_state(
@@ -168,6 +199,7 @@ class TestMocking(unittest.TestCase):
             PLAYING_X_MESSAGE,
             EMPTY_GAME_BOARD_MESSAGE,
         ] + board_state_update_messages
+        expected_bob_messages.append(create_victory_message("Alice"))
         expected_alice_messages = [
             SkipItem(),
             create_text_message("Bob invited you to a game!"),
@@ -175,6 +207,7 @@ class TestMocking(unittest.TestCase):
             EMPTY_GAME_BOARD_MESSAGE,
             create_text_message("Bob has joined your game!"),
         ] + board_state_update_messages
+        expected_alice_messages.append(create_loss_message("Bob"))
         testcase.run()
         testcase.assert_received_values_match_log(expected_bob_messages, 'Bob')
         testcase.assert_received_values_match_log(expected_alice_messages, "Alice")
