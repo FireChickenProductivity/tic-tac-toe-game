@@ -85,7 +85,7 @@ class Server:
             text = help_messages[label]
             type_code = protocol_definitions.BASE_HELP_MESSAGE_PROTOCOL_TYPE_CODE
         else:
-            text = f"Did not recognize help topic {label}!\n{help_messages[""]}"
+            text = f"Did not recognize help topic {label}!\n{help_messages['']}"
             type_code = protocol_definitions.HELP_MESSAGE_PROTOCOL_TYPE_CODE
         values = (text,)
         message = Message(type_code, values)
