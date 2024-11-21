@@ -3,45 +3,7 @@ from protocol_type_codes import *
 
 class MessageProtocol:
     """
-        Interface class for the MessageProtocol objects.
         A message protocol object defines how to convert between values associated with a message for the protocol
-        and messages conforming to the protocol
-    """
-    def get_type_code(self):
-        """Returns a type code integer defining which protocol it is"""
-        pass
-
-    def pack(self, *args):
-        """Packs values into a message conforming to the protocol"""
-        pass
-
-    def get_number_of_fields(self):
-        """Returns the number of fields supported by the protocol"""
-        pass
-
-class TypeCodeOnlyMessageProtocol(MessageProtocol):
-    """
-        Defines a message protocol that only consists of a type code and no fields
-        type_code: the type code for the protocol
-    """
-    def __init__(self, type_code):
-        self.type_code = type_code
-    
-    def get_type_code(self):
-        """Returns a type code integer defining which protocol it is"""
-        return self.type_code
-
-    def get_number_of_fields(self):
-        """Returns the number of fields associated with the message protocol, in this case 0"""
-        return 0
-
-    def pack(self, *args):
-        """Returns a message for the protocol containing only the type code"""
-        return pack_type_code(self.type_code)
-
-class MessageProtocolWithFields(MessageProtocol):
-    """
-        Defines a message protocol that has fields
         type_code: the type code for the protocol
         fields: the fields corresponding to the protocol
     """

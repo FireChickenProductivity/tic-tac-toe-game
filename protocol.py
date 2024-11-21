@@ -215,7 +215,7 @@ def create_protocol_with_fields(type_code: int, fields = None):
     """
     if isinstance(fields, ProtocolField):
         fields = [fields]
-    protocol = MessageProtocolWithFields(type_code, fields)
+    protocol = MessageProtocol(type_code, fields)
     return protocol
 
 def create_protocol(type_code: int, fields = None):
@@ -228,12 +228,9 @@ def create_protocol(type_code: int, fields = None):
         Every field object defines the type of value that should go in the field
         as well as the number of bytes the field can have. 
     """
-    protocol = None
     if not fields:
-        protocol = TypeCodeOnlyMessageProtocol(type_code)
-    else:
-        protocol = create_protocol_with_fields(type_code, fields)
-    return protocol
+        fields = []
+    return create_protocol_with_fields(type_code, fields)
 
 def create_text_message_protocol(type_code: int):
     """
