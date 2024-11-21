@@ -153,9 +153,6 @@ class MessageHandler:
 
     def is_done_obtaining_values(self):
         return self.is_done
-
-    def get_protocol(self):
-        return self.protocol
     
     def get_protocol_type_code(self):
         return self.protocol.get_type_code()

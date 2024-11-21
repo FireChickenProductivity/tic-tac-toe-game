@@ -190,7 +190,7 @@ class TestMessageHandler(unittest.TestCase):
             actual = message_handler.get_values()
             self.assertEqual(expected, actual)
             expected_type_code = i
-            actual_type_code = message_handler.get_protocol().get_type_code()
+            actual_type_code = message_handler.get_protocol_type_code()
             self.assertEqual(expected_type_code, actual_type_code)
             message_handler.prepare_for_next_message()
 
@@ -207,7 +207,7 @@ class TestMessageHandler(unittest.TestCase):
             actual = message_handler.get_values()
             self.assertEqual(expected, actual)
             expected_type_code = i
-            actual_type_code = message_handler.get_protocol().get_type_code()
+            actual_type_code = message_handler.get_protocol_type_code()
             self.assertEqual(expected_type_code, actual_type_code)
             message_handler.prepare_for_next_message()
 
