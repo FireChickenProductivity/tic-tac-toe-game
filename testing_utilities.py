@@ -303,6 +303,8 @@ class TestCase:
         client.buffer_command(command)
         
     def buffer_client_commands(self, user_name, commands):
+        if user_name not in self.clients:
+            self.create_client(user_name)
         for command in commands:
             self.buffer_client_command(user_name, command)
     

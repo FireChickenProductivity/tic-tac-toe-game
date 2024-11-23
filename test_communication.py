@@ -112,9 +112,7 @@ class TestMocking(unittest.TestCase):
     def test_can_send_messages_back_and_forth(self):
         expected_message = Message(0, [help_messages[""]])
         testcase = TestCase()
-        testcase.create_client("Bob")
-        testcase.buffer_client_command("Bob", "help")
-        testcase.buffer_client_command("Bob", 1)
+        testcase.buffer_client_commands("Bob", ["help", 1])
         testcase.run()
         output = testcase.get_output("Bob")
         print('output', output)
@@ -129,15 +127,12 @@ class TestMocking(unittest.TestCase):
             EMPTY_GAME_BOARD_MESSAGE
         ]
         testcase = TestCase(should_perform_automatic_login=True)
-        testcase.create_client("Bob")
         testcase.buffer_client_commands("Bob", ["create Alice", 2, "join Alice"])
         testcase.run()
         testcase.assert_received_values_match_log(expected_messages, 'Bob')
         
     def test_join_and_quit(self):
         testcase = TestCase(should_perform_automatic_login=True)
-        testcase.create_client("Bob")
-        testcase.create_client("Alice")
         testcase.buffer_client_commands("Bob", ["create Alice", 2, "join Alice", 4, 'quit', 5])
         testcase.buffer_client_commands("Alice", [4, 'join Bob', 6])
         testcase.run()
@@ -153,8 +148,6 @@ class TestMocking(unittest.TestCase):
 
     def test_second_player_join(self):
         testcase = TestCase(should_perform_automatic_login=True)
-        testcase.create_client("Bob")
-        testcase.create_client("Alice")
         testcase.buffer_client_commands("Bob", ["create Alice", 4])
         testcase.buffer_client_commands("Alice", [2, 'join Bob', 4, 'quit'])
         expected_alice_messages = [
@@ -183,8 +176,6 @@ class TestMocking(unittest.TestCase):
             alice_messages_number_before_game_starts
         )
         board_state_update_messages = compute_sequential_game_playing_update_messages(final_state)
-        testcase.create_client("Bob")
-        testcase.create_client("Alice")
         bob_commands = ["create Alice", 3, 'join Alice', bob_messages_number_before_game_starts]
         bob_commands.extend(bob_move_commands)
         alice_commands = [2, 'join Bob', alice_messages_number_before_game_starts]
