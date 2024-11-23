@@ -256,6 +256,12 @@ class Client:
             request = protocol.Message(type_code, values)
         return request
 
+    def get_current_game(self):
+        return self.current_game
+
+    def get_current_piece(self):
+        return self.current_piece
+
     def create_request_from_text_input(self, text: str):
         """Creates a request for the server from user input text"""
         text = text.strip()
