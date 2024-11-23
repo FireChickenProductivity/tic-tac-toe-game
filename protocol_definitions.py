@@ -1,13 +1,6 @@
 import protocol
+from protocol_type_codes import ProtocolTypeCodeAssigner
 
-class ProtocolTypeCodeAssigner:
-    def __init__(self):
-        self.next_code = 0
-
-    def claim_next_code(self):
-        result = self.next_code
-        self.next_code += 1
-        return result
 type_code_assigner = ProtocolTypeCodeAssigner()
 
 HELP_MESSAGE_PROTOCOL_TYPE_CODE = type_code_assigner.claim_next_code()
