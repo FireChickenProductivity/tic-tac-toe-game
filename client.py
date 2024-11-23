@@ -149,23 +149,6 @@ class Client:
         )
         self.selector.register(sock, events, data=self.connection_handler)
 
-    def splash(self):
-        """prints splash screen and game instructions"""
-        print("        _____  _   __\n" +
-              "         | |  | | / /`\n" +
-              "         |_|  |_| \_\_,\n" +
-              "       _____   __    __\n" +
-              "        | |   / /\  / /`\n" +
-              "        |_|  /_/--\ \_\_,\n" +
-              "       _____  ___   ____\n" +
-              "        | |  / / \ | |_\n" +
-              "        |_|  \_\_/ |_|__\n")
-        print("Welcome to VCD's Tic-Tac-Toe game!")
-        print("To play, you will need to create an account and login.\n" +
-              "Then, create a game or join someone else's.\n" + 
-              "If you create a game, you must join it as well to start playing.\n\n" +
-              "For help with commands, type 'help'.")
-        
     def send_message(self, message: protocol.Message):
         """Sends the message to the server"""
         self.connection_handler.send_message(message)
@@ -326,7 +309,22 @@ def perform_user_commands_through_connection(client: Client):
                 client.send_message(request)
     client.close()
 
-
+def splash():
+    """prints splash screen and game instructions"""
+    print("        _____  _   __\n" +
+            "         | |  | | / /`\n" +
+            "         |_|  |_| \_\_,\n" +
+            "       _____   __    __\n" +
+            "        | |   / /\  / /`\n" +
+            "        |_|  /_/--\ \_\_,\n" +
+            "       _____  ___   ____\n" +
+            "        | |  / / \ | |_\n" +
+            "        |_|  \_\_/ |_|__\n")
+    print("Welcome to VCD's Tic-Tac-Toe game!")
+    print("To play, you will need to create an account and login.\n" +
+            "Then, create a game or join someone else's.\n" + 
+            "If you create a game, you must join it as well to start playing.\n\n" +
+            "For help with commands, type 'help'.")
 
 def main():
     """The entry point for the client program"""
@@ -346,7 +344,7 @@ def main():
     host, port = arguments.i, arguments.p
 
     connection = Client(host, port, sel, client_logger)
-    connection.splash()
+    splash()
     #Run the client input loop in a separate thread
     client_input_thread = Thread(target=perform_user_commands_through_connection, args=(connection,))
     client_input_thread.start()
