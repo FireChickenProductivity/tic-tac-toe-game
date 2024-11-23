@@ -85,9 +85,9 @@ def decode_text(input_bytes):
     return input_bytes.decode("utf-8")
 
 def create_complex_variable_length_message_protocol(type_code = 2):
-    first_field = protocol.create_string_protocol_field('name', 2)
-    second_field = protocol.create_string_protocol_field('password', 1)
-    third_field = protocol.create_single_byte_nonnegative_integer_protocol_field('type')
+    first_field = protocol.create_string_protocol_field(2)
+    second_field = protocol.create_string_protocol_field(1)
+    third_field = protocol.create_single_byte_nonnegative_integer_protocol_field()
     result = protocol.MessageProtocol(type_code, [first_field, second_field, third_field])
     return result
 
@@ -124,8 +124,8 @@ class TestComplexVariableLengthMessageProtocol(unittest.TestCase):
 
 class TestMultipleFieldFixedLengthMessageProtocol(unittest.TestCase):
     def _compute_protocol(self):
-        first_field = protocol.create_single_byte_nonnegative_integer_protocol_field('1')
-        second_field = protocol.create_single_byte_nonnegative_integer_protocol_field('2')
+        first_field = protocol.create_single_byte_nonnegative_integer_protocol_field()
+        second_field = protocol.create_single_byte_nonnegative_integer_protocol_field()
         result = protocol.MessageProtocol(100, [first_field, second_field])
         return result
 
@@ -165,8 +165,8 @@ class TestMessageHandler(unittest.TestCase):
     
     def _create_more_complex_protocol_map(self):
         variable_length_protocol = create_complex_variable_length_message_protocol(0)
-        bigger_fixed_length_field = protocol.ConstantLengthProtocolField('big', "2s", 2)
-        small_field = protocol.create_single_byte_nonnegative_integer_protocol_field('small')
+        bigger_fixed_length_field = protocol.ConstantLengthProtocolField("2s", 2)
+        small_field = protocol.create_single_byte_nonnegative_integer_protocol_field()
         fixed_length_protocol = protocol.MessageProtocol(1, [bigger_fixed_length_field, small_field])
         fieldless_protocol = protocol.MessageProtocol(2)
         protocol_map = protocol.ProtocolMap([variable_length_protocol, fixed_length_protocol, fieldless_protocol])

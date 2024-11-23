@@ -27,16 +27,6 @@ class AssociatedConnectionState:
     def __str__(self) -> str:
         return f"Username: {self.username}, playing game: {self.current_game}"
 
-help_messages = {
-    "": "Help topics include:\nregister\nlogin\ncreate-game\njoin-game\nmove\nquit\n\nType 'help' followed by the command you would like more information about.",
-    "register": "Upon successfully connecting to the server, you must register an account. To do this, type 'register' followed by your chosen username and password into the terminal, seperated by spaces.",
-    "login": "After you have created an account, you will need to login. Type 'login' followed by your registered username and password into the terminal, seperated by spaces.",
-    "create-game": "To create a new game, type 'create' into the terminal followed by the username of your opponent.",
-    "join-game": "To join someone else's game, type 'join' followed by your opponent's username.",
-    "move": "To make a move, choose a space on the board and find it's corresponding coordinate. The columns are designated by 'a', 'b', or 'c'. The rows are '1', '2', or '3'. An example coordinate would be 'b3'. Type 'move' followed by the chosen coordinate into the terminal to make your move. You can only make a move on empty spaces.",
-    "quit": "To quit a game, enter 'quit' into the terminal."
-}
-
 def create_listening_socket(address):
     lsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     # Avoid bind() exception: OSError: [Errno 48] Address already in use
@@ -71,8 +61,6 @@ class Server:
 
     def _create_protocol_callback_handler(self):
         self.protocol_callback_handler = protocol.ProtocolCallbackHandler()
-        self.protocol_callback_handler.register_callback_with_protocol(self.handle_default_help_message, protocol_definitions.BASE_HELP_MESSAGE_PROTOCOL_TYPE_CODE)
-        self.protocol_callback_handler.register_callback_with_protocol(self.handle_help_message, protocol_definitions.HELP_MESSAGE_PROTOCOL_TYPE_CODE)
         self.protocol_callback_handler.register_callback_with_protocol(self.handle_signin, protocol_definitions.SIGN_IN_PROTOCOL_TYPE_CODE)
         self.protocol_callback_handler.register_callback_with_protocol(self.handle_account_creation, protocol_definitions.ACCOUNT_CREATION_PROTOCOL_TYPE_CODE)
         self.protocol_callback_handler.register_callback_with_protocol(self.handle_game_creation, protocol_definitions.GAME_CREATION_PROTOCOL_TYPE_CODE)
@@ -97,23 +85,6 @@ class Server:
     def _send_text_message(self, text, connection_information):
         message = Message(protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE, text)
         self.connection_table.send_message_to_entry(message, connection_information)
-
-    def create_help_message(self, label, connection_information):
-        if label in help_messages:
-            text = help_messages[label]
-            type_code = protocol_definitions.BASE_HELP_MESSAGE_PROTOCOL_TYPE_CODE
-        else:
-            text = f"Did not recognize help topic {label}!\n{help_messages['']}"
-            type_code = protocol_definitions.HELP_MESSAGE_PROTOCOL_TYPE_CODE
-        values = (text,)
-        message = Message(type_code, values)
-        self.connection_table.send_message_to_entry(message, connection_information)
-
-    def handle_default_help_message(self, connection_information):
-        self.create_help_message("", connection_information)
-
-    def handle_help_message(self, label, connection_information):
-        self.create_help_message(label, connection_information)
 
     def handle_account_creation(self, username, password, connection_information):
         try:

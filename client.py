@@ -15,6 +15,7 @@ import logging_utilities
 import protocol_definitions
 import protocol
 import game_actions
+from help_system import create_help_message
 
 CLIENT_COMMANDS = set(['quit', 'join', 'create', 'move', 'exit', 'login', 'register', 'help'])
 
@@ -132,9 +133,6 @@ class Client:
         self.protocol_callback_handler.register_callback_with_protocol(self.handle_text_message, protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE)
         self.protocol_callback_handler.register_callback_with_protocol(self.handle_game_update, protocol_definitions.GAME_UPDATE_PROTOCOL_TYPE_CODE)
         self.protocol_callback_handler.register_callback_with_protocol(self.handle_game_piece_update, protocol_definitions.GAME_PIECE_PROTOCOL_TYPE_CODE)
-        self.protocol_callback_handler.register_callback_with_protocol(self.handle_help_message, protocol_definitions.HELP_MESSAGE_PROTOCOL_TYPE_CODE)
-        self.protocol_callback_handler.register_callback_with_protocol(self.handle_help_message, protocol_definitions.BASE_HELP_MESSAGE_PROTOCOL_TYPE_CODE)
-        self.protocol_callback_handler.register_callback_with_protocol(self.handle_game_ending, protocol_definitions.GAME_ENDING_PROTOCOL_TYPE_CODE)
 
     def _create_connection_handler(self):
         """Creates the connection handler for managing the connection with the server"""
@@ -214,12 +212,11 @@ class Client:
         values = None
         request = None
         if action == "help":
+            label = ""
             if value:
-                type_code = protocol_definitions.HELP_MESSAGE_PROTOCOL_TYPE_CODE
-                values = (value,)
-            else:
-                type_code = protocol_definitions.BASE_HELP_MESSAGE_PROTOCOL_TYPE_CODE
-                values = []
+                label = value
+            help_text = create_help_message(label)
+            self.handle_help_message(help_text)
         elif action == "login":
             values = _parse_two_space_separated_values(value)
             if values is None:
