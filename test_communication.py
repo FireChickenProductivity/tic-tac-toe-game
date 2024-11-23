@@ -110,7 +110,7 @@ def compute_sequential_game_playing_update_messages(state: str):
 
 class TestMocking(unittest.TestCase):
     def test_can_send_messages_back_and_forth(self):
-        expected_message = Message(0, [help_messages[""]])
+        expected_message = Message(protocol_definitions.BASE_HELP_MESSAGE_PROTOCOL_TYPE_CODE, [help_messages[""]])
         testcase = TestCase()
         testcase.buffer_client_commands("Bob", ["help", 1])
         testcase.run()
