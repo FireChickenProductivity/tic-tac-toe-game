@@ -43,10 +43,6 @@ class MessageProtocol:
         """Returns true if the field at index i is fixed length and false otherwise"""
         return self.fields[i].is_fixed_length()
 
-    def is_last_field(self, i):
-        """Returns true if the field at index i is the last and false otherwise"""
-        return i == len(self.fields) - 1
-    
     def compute_fixed_length_field_length(self, i):
         """Returns the field length for the field at index i assuming that it is fixed length"""
         field = self.fields[i]
@@ -91,11 +87,6 @@ class MessageProtocol:
         length = self.compute_fixed_length_field_length(i)
         relevant_bytes = input_bytes[starting_index: starting_index + length]
         return decode_value(struct.unpack(">" + field.compute_struct_text(), relevant_bytes)[0])
-    
-    def compute_field_name(self, i):
-        """Returns the name of the field at the specified index"""
-        field = self.fields[i]
-        return field.get_name()
     
     def get_number_of_fields(self):
         """Returns the number of fields corresponding to the protocol"""
