@@ -123,7 +123,7 @@ class Server:
         if self.game_handler.game_exists(joiner_username, other_player_username):
             game = self.game_handler.get_game(joiner_username, other_player_username)
             if joiner_state.current_game is not None:
-                self.handle_game_quit({}, connection_information)
+                self.handle_game_quit(connection_information)
             joiner_state.current_game = game
             player_piece = game.compute_player_piece(joiner_username)
             piece_message = Message(protocol_definitions.GAME_PIECE_PROTOCOL_TYPE_CODE, (player_piece,))
