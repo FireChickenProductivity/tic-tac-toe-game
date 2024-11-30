@@ -208,7 +208,7 @@ class ConnectionHandler:
         if self.callback_handler.has_protocol(request.type_code):
             self.respond_to_request(request)
         else:
-            print("Not identified protocol received", request.type_code, self.is_server)
+            print("Unidentified protocol received", request.type_code, f"values: {request.values}")
         
     def read(self):
         """Responds to the selector notifying the handler that bytes have been received from the peer"""
