@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 
 import sys
@@ -55,6 +54,13 @@ class Client:
         self.is_closed = False
         self.has_received_successful_message = False
         self.commands: CommandManager = create_commands(self)
+
+    def handle_help_command(self, label):
+        if self.commands.has_command(label):
+            text = self.commands.get_command_help_message(label)
+        else:
+            text = f"{label} is not a command. Please choose a help topic by typing 'help' followed by one of the following commands: {self.commands.get_command_names_text()}."
+        self.output_text("Help: " + text)
 
     def handle_game_ending(self, opponent_username, outcome):
         outcome_text = 'tie'

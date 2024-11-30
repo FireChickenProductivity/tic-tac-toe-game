@@ -1,7 +1,6 @@
 import game_actions
 import protocol_definitions
 from protocol import Message
-from help_system import create_help_message
 
 def _parse_two_space_separated_values(text):
     """Parses text into 2 space separated values. Returns None on failure."""
@@ -20,7 +19,7 @@ class Command:
     def _handle_result(self, result):
         if type(result) == str:
             self.client.output_text(result + "\n" + self.get_help_message())
-        else:
+        elif result is not None:
             self.client.send_message(result)
 
     def perform_command(self, value):
@@ -92,12 +91,8 @@ def login(client, value):
         result = Message(protocol_definitions.SIGN_IN_PROTOCOL_TYPE_CODE, values)
     return result
 
-def display_help_message(client, value):
-    label = ""
-    if value:
-        label = value
-    help_text = create_help_message(label)
-    return help_text
+def output_help_message(client, value):
+    client.handle_help_command(value)
 
 class CommandManager:
     def __init__(self, commands):
@@ -111,11 +106,15 @@ class CommandManager:
 
     def get_command_names_text(self):
         text = ""
-        for command in self.commands:
+        for command in self.commands.values():
             if text:
                 text += ", "
             text += command.get_name()
         return text
+
+    def get_command_help_message(self, name):
+        return self.commands[name].get_help_message()
+
 
 def create_commands(client):
     def create_command_for_client(name, help_message, action):
@@ -154,7 +153,7 @@ def create_commands(client):
         create_command_for_client(
             'help',
             "Type 'help' for generic instructions or 'help' followed by a topic for specific instructions.",
-            display_help_message
+            output_help_message
         )
     ]
     command_dictionary = {}
