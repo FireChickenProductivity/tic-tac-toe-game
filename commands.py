@@ -100,17 +100,43 @@ def display_help_message(client, value):
     client.handle_help_message(help_text)
 
 def create_commands(client):
+    def create_command_for_client(name, help_message, action):
+        return Command(client, name, help_message, action)
     commands = [
-        Command(
-        client,
+        create_command_for_client(
         'move',
         "To make a move, choose a space on the board and find it's corresponding coordinate. The rows are designated by 'a', 'b', or 'c'. The columns are '1', '2', or '3'. An example coordinate would be 'b3'. Type 'move' followed by the chosen coordinate into the terminal to make your move. You can only make a move on empty spaces.",
         make_move
         ),
-        Command(
-            client,
+        create_command_for_client(
             'create',
-            "To create a new game, type 'create' into the terminal followed by the username of your opponent."
+            "To create a new game, type 'create' into the terminal followed by the username of the person you are playing against.",
+            create_game
+        ),
+        create_command_for_client(
+            'join',
+            "To join a game, type 'join' followed by the username of the person you want to play against.",
+            join_game
+        ),
+        create_command_for_client(
+            'quit',
+            "To quit a game, enter 'quit' into the terminal.",
+            quit_game
+        ),
+        create_command_for_client(
+            'register',
+            "Upon successfully connecting to the server, you must register an account. To do this, type 'register' followed by your chosen username and password into the terminal, seperated by spaces.",
+            register_account
+        ),
+        create_command_for_client(
+            'login',
+            "After you have created an account, you will need to login. Type 'login' followed by your registered username and password into the terminal, seperated by spaces.",
+            login
+        ),
+        create_command_for_client(
+            'help',
+            "Type 'help' for generic instructions or 'help' followed by a topic for specific instructions.",
+            display_help_message
         )
     ]
     command_dictionary = {}
