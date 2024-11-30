@@ -184,7 +184,7 @@ class ConnectionHandler:
 
         #Pick the correct protocol maps based on if this is the client or the server
         sending_protocol_map, receiving_protocol_map = compute_sending_and_receiving_protocol_maps(is_server)
-
+        self.receiving_protocol_map = receiving_protocol_map
         self.message_receiver = MessageReceiver(self.logger, self.connection_information, receiving_protocol_map, self.close)
         self.message_sender = MessageSender(self.logger, self.connection_information, sending_protocol_map, self.close)
 
@@ -195,17 +195,20 @@ class ConnectionHandler:
     def respond_to_request(self, request: Message):
         """Responds to the request message"""
         if self.is_server:
-            self.callback_handler.pass_values_to_protocol_callback_with_connection_information(request.values, request.type_code, self.connection_information)
+            values = []
+            values.extend(request.values)
+            values.append(self.connection_information)
         else:
-            self.callback_handler.pass_values_to_protocol_callback(request.values, request.type_code)
+            values = request.values
+        self.callback_handler.pass_values_to_protocol_callback(values, request.type_code)
 
     def respond_to_received_message(self):
         """This responds to a request by extracting the message from the message receiver and transmits any responses if needed"""
         request = self.message_receiver.extract_message()
         if self.callback_handler.has_protocol(request.type_code):
             self.respond_to_request(request)
-        elif not self.is_server:
-            print(f"Received message with type code {request.type_code}! values: {request.values}")
+        else:
+            print("Unidentified protocol received", request.type_code, f"values: {request.values}")
         
     def read(self):
         """Responds to the selector notifying the handler that bytes have been received from the peer"""

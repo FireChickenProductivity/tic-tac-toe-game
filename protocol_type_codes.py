@@ -22,3 +22,12 @@ def compute_message_after_type_code(message):
         message: bytes containing a message created using a message protocol
     """
     return message[TYPE_CODE_SIZE:]
+
+class ProtocolTypeCodeAssigner:
+    def __init__(self):
+        self.next_code = 0
+
+    def claim_next_code(self):
+        result = self.next_code
+        self.next_code += 1
+        return result

@@ -30,6 +30,8 @@ The game message protocol defines the structure and format of messages exchanged
 * Message format: A struct-based format is used for message serialization and deserialization.
 * Message structure: type_code: a single byte unique identifier for the message type at the start of every message. Field 1, Field 2, ...: Additional data fields specific to the message type. Variable length fields are preceded by a field specifying its length.
 
+Type codes are automatically generated and may consequently change between updates. 
+
 Abstract protocols (used to define concrete message protocols):
 * Text message protocol: Contains a type code followed by a 2 byte field giving the length of the last field, which is a string.
 * Username and password message protocol: Contains a type code followed by a 1 byte field giving the length of the next field. The next field is a string containing the username. The following field contains one byte giving the length of the following field, which is a string field containing the password. 
@@ -41,24 +43,20 @@ Abstract protocols (used to define concrete message protocols):
 * Single username and single character message protocol: Contains a type code and then a variable length string with its length determined by a single byte field. The last field is a single byte character.
 
 Message Protocols for Communicating From the Client to the Server:
-* Help with no argument: type code 0. No other fields. Expected response: The base help response described below. 
-* Help with argument: type code 1. A text message protocol with a string containing a specific topic to receive help on. The expected response is the help response with argument described below.
-* Account creation request: type code 2. A username and password protocol for requesting the creation of an account. The expected response is a text message response describing if the account could be created or already existed. 
-* Login request: Type code 3. A username and password protocol for logging in. The expected response is a text message response describing if login was successful. 
-* Game update request: Type code 5. A single byte message protocol describing a move performed by the user. The number represents the tile to perform the move on. The expected response is either a game update response giving the new board state or a text message response explaining that the move was not permitted. If the move ends the game, a game ending message response is expected. 
-* Join game request: a small text message protocol with type code 6 and the string giving the name of the other player in the game to join. Only one game is permitted between 2 players at a time. The expected response is a game piece update message describing the piece controlled by the player followed by a game update response giving the state of the board if successful and a text message response explaining what went wrong if unsuccessful.
-* Quit game request: consists only of type code 7.
-* Chat message protocol: a text message protocol with type code 8 and the string containing a chat message to send to the other person playing the active game. There is no expected response message.
-* Game creation protocol: a small text message protocol with type code 9 and the string containing the name of the player to invite to the game. The expected response is a text message explaining if the game creation was successful. 
+* Account creation request: A username and password protocol for requesting the creation of an account. The expected response is a text message response describing if the account could be created or already existed. 
+* Login request: A username and password protocol for logging in. The expected response is a text message response describing if login was successful. 
+* Game update request A single byte message protocol describing a move performed by the user. The number represents the tile to perform the move on. The expected response is either a game update response giving the new board state or a text message response explaining that the move was not permitted. If the move ends the game, a game ending message response is expected. 
+* Join game request: a small text message protocol with the string giving the name of the other player in the game to join. Only one game is permitted between 2 players at a time. The expected response is a game piece update message describing the piece controlled by the player followed by a game update response giving the state of the board if successful and a text message response explaining what went wrong if unsuccessful.
+* Quit game request: consists only of the type code .
+* Chat message protocol: a text message protocol the string containing a chat message to send to the other person playing the active game. There is no expected response message.
+* Game creation protocol: a small text message protocol with the string containing the name of the player to invite to the game. The expected response is a text message explaining if the game creation was successful. 
 
 Message Protocols for Communicating From the Server to the Client:
-* Base help response: a text message protocol with type code 0. The string contains a help message giving some information on how to communicate with the server.
-* Help response with argument: a text message protocol with type code 1. If the request argument refers to a help topic supported by the server, the string contains help information on that topic. Otherwise, it reports that the received topic was not supported and additionally sends the base help text.
-* Text message response: a text message protocol with type code 4 for giving miscellaneous updates to the client. 
-* Game update response: a game board message protocol with type code 5. This gives the board for the active game and is sent when a player joins a game or after a move is made.
-* Chat message response: a text message protocol with type code 9 sending a text message to the desired recipient. 
-* Game ending protocol: a single username and single character message protocol with type code 11. This is sent at the end of a game. The single character at the end describes if the game ended in a win, loss, or tie for the notified player. The username contains the name of the opponent to allow distinguishing between games.
-* Game piece protocol: a single character message protocol with type code 10 containing the game piece belonging to the messaged player. This is sent when a player joins a game.
+* Text message response: a text message protocol with for giving miscellaneous updates to the client. 
+* Game update response: a game board message protocol. This gives the board for the active game and is sent when a player joins a game or after a move is made.
+* Chat message response: a text message protocol sending a text message to the desired recipient. 
+* Game ending protocol: a single username and single character message protocol. This is sent at the end of a game. The single character at the end describes if the game ended in a win, loss, or tie for the notified player. The username contains the name of the opponent to allow distinguishing between games.
+* Game piece protocol: a single character message protocol containing the game piece belonging to the messaged player. This is sent when a player joins a game.
 
 ## Technologies Used
 * Python
@@ -91,7 +89,7 @@ Sample test:
         testcase.assert_values_match_output([ContainsMatcher("Help")], 'Bob')
 ```
 
-The expected message is the message expected from the server to the client. A test case object is created for the test. A client named "Bob" is created inside this test case. It buffers the commands "help" and 1. This means that this will stimulate Bob running the help command and then wait until the total number of received messages at this simulated client is at least 1 before proceeding. This prevents the client from terminating before it has finished receiving messages. A number is used here to decide how many messages must be received before proceeding. A timeout throws an exception if this takes too long. This is useful for making the simulated client receive responses from prior messages or messages that result from other simulated clients before executing the following instructions.
+The expected message is the message expected from the server to the client. A test case object is created for the test. A client named "Bob" is created inside this test case (Note: clients no longer need to be explicitly created as they will get implicitly created by the buffer_client_commands method). It buffers the commands "help" and 1. This means that this will stimulate Bob running the help command and then wait until the total number of received messages at this simulated client is at least 1 before proceeding. This prevents the client from terminating before it has finished receiving messages. A number is used here to decide how many messages must be received before proceeding. A timeout throws an exception if this takes too long. This is useful for making the simulated client receive responses from prior messages or messages that result from other simulated clients before executing the following instructions.
 
 The test case is ran with the run method. The output obtained is the output to the client's simulated terminal. The first assertion statement asserts that the received messages are as expected. The second assertion asserts that that the simulated client terminal output consists of a single message containing the text "Help" somewhere inside it. 
 

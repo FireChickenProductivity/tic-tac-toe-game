@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 
 import sys
@@ -15,8 +14,7 @@ import logging_utilities
 import protocol_definitions
 import protocol
 import game_actions
-
-CLIENT_COMMANDS = set(['quit', 'join', 'create', 'move', 'exit', 'login', 'register', 'help'])
+from commands import create_commands, CommandManager
 
 def create_socket_from_address(target_address):
     """Creates a client socket that connects to the specified address"""
@@ -24,13 +22,6 @@ def create_socket_from_address(target_address):
     sock.setblocking(False)
     sock.connect_ex(target_address)
     return sock
-
-def _parse_two_space_separated_values(text):
-    """Parses text into 2 space separated values. Returns None on failure."""
-    values = text.split(" ", maxsplit=1)
-    if len(values) != 2:
-        return None
-    return values
 
 class Client:
     #The default and maximum amount of time to wait in between reconnection attempts
@@ -47,6 +38,7 @@ class Client:
             socket_creation_function: the function used to create the socket from an address, which is settable to help with testing
         """
         self.username = None
+        self.password = None
         self.current_piece = ""
         self.reconnection_timeout = self.DEFAULT_RECONNECTION_TIMEOUT
         self.host = host
@@ -61,10 +53,18 @@ class Client:
         self._create_connection_handler()
         self.is_closed = False
         self.has_received_successful_message = False
+        self.commands: CommandManager = create_commands(self)
 
-    def handle_game_ending(self, values):
-        opponent_username = values["opponent"]
-        outcome = values['character']
+    def handle_help_command(self, label):
+        if self.commands.has_command(label):
+            text = self.commands.get_command_help_message(label)
+        else:
+            text = f"Please choose a help topic by typing 'help' followed by one of the following commands: {self.commands.get_command_names_text()}."
+            if label != "":
+                text = f"{label} is not a command. " + text
+        self.output_text("Help: " + text)
+
+    def handle_game_ending(self, opponent_username, outcome):
         outcome_text = 'tie'
         if outcome == game_actions.LOSS:
             outcome_text = 'loss'
@@ -72,13 +72,13 @@ class Client:
             outcome_text = 'win'
         self.output_text(f"Your game with {opponent_username} ended with a {outcome_text}!")
         if opponent_username == self.current_opponent:
-            self._reset_game_state()
+            self.reset_game_state()
             self.output_text("This game has ended.\nYou may start another game with the 'create' command and may quit the program using the 'exit' command.")
 
-    def update_game(self, values):
+    def handle_game_update(self, game_text):
         """Updates the game state"""
         self.output_text("The game board is now:")
-        self.current_game = values["text"]
+        self.current_game = game_text
         gamerow_1 = [' ',' ',' ','|',' ',' ',' ','|',' ',' ',' ']
         gamerow_2 = [' ',' ',' ','|',' ',' ',' ','|',' ',' ',' ']
         gamerow_3 = [' ',' ',' ','|',' ',' ',' ','|',' ',' ',' ']
@@ -115,27 +115,21 @@ class Client:
                          srow_2 + "\n___|___|___ b\n" +
                          srow_3 + "\n   |   |    c\n 1   2   3\n")
 
-    def update_game_piece(self, values):
+    def handle_game_piece_update(self, character):
         """Update the player's game piece"""
-        self.current_piece = values["character"]
+        self.current_piece = character
         self.output_text(f"You are playing as {self.current_piece}.")
 
-    def handle_text_message(self, values):
+    def handle_text_message(self, text):
         """Displays a text message from the server"""
-        self.output_text("Server: " + values["text"])
-
-    def handle_help_message(self, values):
-        """Displays a help message from the server"""
-        self.output_text("Help: " + values["text"])
+        self.output_text("Server: " + text)
 
     def _create_protocol_callback_handler(self):
         """Creates the callback handler to let the client respond to the server"""
         self.protocol_callback_handler = protocol.ProtocolCallbackHandler()
         self.protocol_callback_handler.register_callback_with_protocol(self.handle_text_message, protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE)
-        self.protocol_callback_handler.register_callback_with_protocol(self.update_game, protocol_definitions.GAME_UPDATE_PROTOCOL_TYPE_CODE)
-        self.protocol_callback_handler.register_callback_with_protocol(self.update_game_piece, protocol_definitions.GAME_PIECE_PROTOCOL_TYPE_CODE)
-        self.protocol_callback_handler.register_callback_with_protocol(self.handle_help_message, protocol_definitions.HELP_MESSAGE_PROTOCOL_TYPE_CODE)
-        self.protocol_callback_handler.register_callback_with_protocol(self.handle_help_message, protocol_definitions.BASE_HELP_MESSAGE_PROTOCOL_TYPE_CODE)
+        self.protocol_callback_handler.register_callback_with_protocol(self.handle_game_update, protocol_definitions.GAME_UPDATE_PROTOCOL_TYPE_CODE)
+        self.protocol_callback_handler.register_callback_with_protocol(self.handle_game_piece_update, protocol_definitions.GAME_PIECE_PROTOCOL_TYPE_CODE)
         self.protocol_callback_handler.register_callback_with_protocol(self.handle_game_ending, protocol_definitions.GAME_ENDING_PROTOCOL_TYPE_CODE)
 
     def _create_connection_handler(self):
@@ -153,23 +147,6 @@ class Client:
         )
         self.selector.register(sock, events, data=self.connection_handler)
 
-    def splash(self):
-        """prints splash screen and game instructions"""
-        print("        _____  _   __\n" +
-              "         | |  | | / /`\n" +
-              "         |_|  |_| \_\_,\n" +
-              "       _____   __    __\n" +
-              "        | |   / /\  / /`\n" +
-              "        |_|  /_/--\ \_\_,\n" +
-              "       _____  ___   ____\n" +
-              "        | |  / / \ | |_\n" +
-              "        |_|  \_\_/ |_|__\n")
-        print("Welcome to VCD's Tic-Tac-Toe game!")
-        print("To play, you will need to create an account and login.\n" +
-              "Then, create a game or join someone else's.\n" + 
-              "If you create a game, you must join it as well to start playing.\n\n" +
-              "For help with commands, type 'help'.")
-        
     def send_message(self, message: protocol.Message):
         """Sends the message to the server"""
         self.connection_handler.send_message(message)
@@ -202,83 +179,35 @@ class Client:
                 done = False
                 self.pause_in_between_reconnection_attempts()
 
-    def _reset_game_state(self):
+    def reset_game_state(self):
         self.current_game = None
         self.current_piece = None
         self.current_opponent = None
 
-    def create_request(self, action, value):
-        """Creates a request for the server from an action value pair. Returns None on failure."""
-        if action not in CLIENT_COMMANDS:
-            self.output_text('Command not recognized.')
-            return 
-        type_code = None
-        values = None
-        request = None
-        if action == "help":
-            if value:
-                type_code = protocol_definitions.HELP_MESSAGE_PROTOCOL_TYPE_CODE
-                values = (value,)
-            else:
-                type_code = protocol_definitions.BASE_HELP_MESSAGE_PROTOCOL_TYPE_CODE
-                values = []
-        elif action == "login":
-            values = _parse_two_space_separated_values(value)
-            if values is None:
-                self.output_text('When logging in, you must provide a username, press space, and provide your password!')
-            elif self.current_game is not None:
-                self.output_text("You cannot log in to an account in the middle of a game!")
-            else:
-                type_code = protocol_definitions.SIGN_IN_PROTOCOL_TYPE_CODE
-                self.username = values[0]
-        elif action == "register":
-            values = _parse_two_space_separated_values(value)
-            if values is None:
-                self.output_text('When creating an account, you must provide a username, press space, and provide your password!')
-            elif self.current_game is not None:
-                self.output_text("You cannot register an account in the middle of a game!")
-            else:
-                type_code = protocol_definitions.ACCOUNT_CREATION_PROTOCOL_TYPE_CODE
-        elif action == "quit":
-            if self.current_game is None:
-                self.output_text("You cannot quit a game when you are not in one.")
-            else:
-                type_code = protocol_definitions.QUIT_GAME_PROTOCOL_TYPE_CODE
-                values = []
-                self._reset_game_state()
-        elif action == "join":
-            if value == "":
-                self.output_text("To join a game, you must specify the username of your opponent.")
-            else:
-                type_code = protocol_definitions.JOIN_GAME_PROTOCOL_TYPE_CODE
-                values = (value,)
-                self.current_opponent = value
-        elif action == "create":
-            if value == "":
-                self.output_text("To create a game, you must specify the username of your opponent.")
-            else:
-                type_code = protocol_definitions.GAME_CREATION_PROTOCOL_TYPE_CODE
-                values = (value,)
-        elif action == "move":
-            if not self.current_game:
-                self.output_text("You cannot make a move because you are not in a game.")
-            elif not game_actions.is_valid_move_text(value):
-                self.output_text("You must provide a valid move. Use the row followed by the column, such as 'move a1'.")
-            else:
-                move_number = game_actions.convert_move_text_to_move_number(value)
-                current_piece = game_actions.compute_current_player(self.current_game)
-                if self.current_game[move_number - 1] != ' ':
-                    self.output_text("You cannot move there because that spot is already taken.")
-                elif current_piece == self.current_piece:
-                    type_code = protocol_definitions.GAME_UPDATE_PROTOCOL_TYPE_CODE
-                    values = (move_number,)
-                else:
-                    self.output_text("You cannot move because it is not your turn.")
-        if type_code is not None:
-            request = protocol.Message(type_code, values)
-        return request
+    def handle_command(self, action, value):
+        """Performs the specified client command"""
+        if self.commands.has_command(action):
+            self.commands.perform_command(action, value)
+        else:
+            self.output_text(f"The command '{action}' was not recognized. Valid commands are {self.commands.get_command_names_text()}")
+    
+    def set_credentials(self, username, password):
+        self.username = username
+        self.password = password
 
-    def create_request_from_text_input(self, text: str):
+    def set_current_opponent(self, value):
+        self.current_opponent = value
+
+    def get_current_opponent(self):
+        return self.current_opponent
+
+    def get_current_game(self):
+        return self.current_game
+
+    def get_current_piece(self):
+        return self.current_piece
+
+    def perform_command_from_text_input(self, text: str):
         """Creates a request for the server from user input text"""
         text = text.strip()
         action_value_split = text.split(' ', maxsplit=1)
@@ -287,8 +216,7 @@ class Client:
         #If an argument is detected for the action, put it inside value
         if len(action_value_split) > 1:
             value = action_value_split[1]
-        request = self.create_request(action, value)
-        return request
+        self.handle_command(action, value)
     
     def run_selector_loop(self):
         """Responds to socket write and read events"""
@@ -326,12 +254,25 @@ def perform_user_commands_through_connection(client: Client):
         if user_input == 'exit':
             done = True
         else:
-            request = client.create_request_from_text_input(user_input)
-            if request:
-                client.send_message(request)
+            client.perform_command_from_text_input(user_input)
     client.close()
 
-
+def splash():
+    """prints splash screen and game instructions"""
+    print("        _____  _   __\n" +
+            "         | |  | | / /`\n" +
+            "         |_|  |_| \_\_,\n" +
+            "       _____   __    __\n" +
+            "        | |   / /\  / /`\n" +
+            "        |_|  /_/--\ \_\_,\n" +
+            "       _____  ___   ____\n" +
+            "        | |  / / \ | |_\n" +
+            "        |_|  \_\_/ |_|__\n")
+    print("Welcome to VCD's Tic-Tac-Toe game!")
+    print("To play, you will need to create an account and login.\n" +
+            "Then, create a game or join someone else's.\n" + 
+            "If you create a game, you must join it as well to start playing.\n\n" +
+            "For help with commands, type 'help'.")
 
 def main():
     """The entry point for the client program"""
@@ -351,7 +292,7 @@ def main():
     host, port = arguments.i, arguments.p
 
     connection = Client(host, port, sel, client_logger)
-    connection.splash()
+    splash()
     #Run the client input loop in a separate thread
     client_input_thread = Thread(target=perform_user_commands_through_connection, args=(connection,))
     client_input_thread.start()

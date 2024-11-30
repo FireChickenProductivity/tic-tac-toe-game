@@ -73,8 +73,7 @@ class TestClientHandler:
         self.commands.append(command)
 
     def perform_command(self, command: str):
-        request = self.client.create_request_from_text_input(command)
-        self.client.send_message(request)
+        self.client.perform_command_from_text_input(command)
 
     def send_message(self, message):
         self.client.send_message(message)
@@ -301,6 +300,8 @@ class TestCase:
         client.buffer_command(command)
         
     def buffer_client_commands(self, user_name, commands):
+        if user_name not in self.clients:
+            self.create_client(user_name)
         for command in commands:
             self.buffer_client_command(user_name, command)
     
@@ -339,6 +340,9 @@ class TestCase:
     def get_output(self, user_name):
         return self.clients[user_name].get_output()
 
+    def get_server_log(self, category: str = None):
+        return self.server.get_log(category)
+
     def do_event_log_items_match(self, expected, actual: connection_handler.MessageEvent):
         if isinstance(expected, connection_handler.MessageEvent):
             return expected == actual
@@ -356,8 +360,13 @@ class TestCase:
             if not matching_function(value, actual[index]):
                 error_message += f"Values at index {index} did not match:\n{value}\n{actual[index]}\n"
         if len(expected) != len(actual):
-            error_message += f"Lengths did not match! actual: {len(actual)} expected: {len(expected)}\n"
+            error_message += f"Lengths did not match! actual: {len(actual)} expected: {len(expected)}\nActual list: {actual}"
         if error_message != "":
+            error_message += f"\nServer log: {self.get_server_log()}"
+            for client_name in self.clients:
+                error_message += f"\n{client_name} log: {self.get_log(client_name)}"
+                error_message += f"\nsending log: {self.get_log(client_name, connection_handler.SENDING_MESSAGE_LOG_CATEGORY)}"
+                error_message += f"\noutput: {self.get_output(client_name)}"
             raise Exception(error_message)
 
     def assert_values_match_log(self, values, user_name, category=None):

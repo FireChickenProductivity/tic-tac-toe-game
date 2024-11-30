@@ -27,16 +27,6 @@ class AssociatedConnectionState:
     def __str__(self) -> str:
         return f"Username: {self.username}, playing game: {self.current_game}"
 
-help_messages = {
-    "": "Help topics include:\nregister\nlogin\ncreate-game\njoin-game\nmove\nquit\n\nType 'help' followed by the command you would like more information about.",
-    "register": "Upon successfully connecting to the server, you must register an account. To do this, type 'register' followed by your chosen username and password into the terminal, seperated by spaces.",
-    "login": "After you have created an account, you will need to login. Type 'login' followed by your registered username and password into the terminal, seperated by spaces.",
-    "create-game": "To create a new game, type 'create' into the terminal followed by the username of your opponent.",
-    "join-game": "To join someone else's game, type 'join' followed by your opponent's username.",
-    "move": "To make a move, choose a space on the board and find it's corresponding coordinate. The columns are designated by 'a', 'b', or 'c'. The rows are '1', '2', or '3'. An example coordinate would be 'b3'. Type 'move' followed by the chosen coordinate into the terminal to make your move. You can only make a move on empty spaces.",
-    "quit": "To quit a game, enter 'quit' into the terminal."
-}
-
 def create_listening_socket(address):
     lsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     # Avoid bind() exception: OSError: [Errno 48] Address already in use
@@ -71,8 +61,6 @@ class Server:
 
     def _create_protocol_callback_handler(self):
         self.protocol_callback_handler = protocol.ProtocolCallbackHandler()
-        self.protocol_callback_handler.register_callback_with_protocol(self.create_help_message, protocol_definitions.BASE_HELP_MESSAGE_PROTOCOL_TYPE_CODE)
-        self.protocol_callback_handler.register_callback_with_protocol(self.create_help_message, protocol_definitions.HELP_MESSAGE_PROTOCOL_TYPE_CODE)
         self.protocol_callback_handler.register_callback_with_protocol(self.handle_signin, protocol_definitions.SIGN_IN_PROTOCOL_TYPE_CODE)
         self.protocol_callback_handler.register_callback_with_protocol(self.handle_account_creation, protocol_definitions.ACCOUNT_CREATION_PROTOCOL_TYPE_CODE)
         self.protocol_callback_handler.register_callback_with_protocol(self.handle_game_creation, protocol_definitions.GAME_CREATION_PROTOCOL_TYPE_CODE)
@@ -98,31 +86,15 @@ class Server:
         message = Message(protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE, text)
         self.connection_table.send_message_to_entry(message, connection_information)
 
-    def create_help_message(self, values, connection_information):
-        label: str = values.get("text", "")
-        if label in help_messages:
-            text = help_messages[label]
-            type_code = protocol_definitions.BASE_HELP_MESSAGE_PROTOCOL_TYPE_CODE
-        else:
-            text = f"Did not recognize help topic {label}!\n{help_messages['']}"
-            type_code = protocol_definitions.HELP_MESSAGE_PROTOCOL_TYPE_CODE
-        values = (text,)
-        message = Message(type_code, values)
-        self.connection_table.send_message_to_entry(message, connection_information)
-
-    def handle_account_creation(self, values, connection_information):
+    def handle_account_creation(self, username, password, connection_information):
         try:
-            username = values['username']
-            password = values['password']
             insert_account_into_database_at_path(Account(username, password), self.database_path)
             text = "Your account was successfully created with username: " + username
         except sqlite3.Error:
             text = f"The username {username} was already taken!"
         self._send_text_message(text, connection_information)
 
-    def handle_signin(self, values, connection_information):
-        username = values['username']
-        password = values['password']
+    def handle_signin(self, username, password, connection_information):
         account: Account = retrieve_account_with_name_from_database_at_path(username, self.database_path)
         if account is None or password != account.password:
             text = f"No account with username matches your password!"
@@ -133,10 +105,9 @@ class Server:
             self.usernames_to_connections[username] = connection_information
         self._send_text_message(text, connection_information)
 
-    def handle_game_creation(self, values, connection_information):
+    def handle_game_creation(self, invited_user_username, connection_information):
         creator_state = self.connection_table.get_entry_state(connection_information)
         creator_username = creator_state.username
-        invited_user_username = values["username"]
         is_game_created = self.game_handler.create_game(creator_username, invited_user_username)
         if is_game_created:
             text = "The game was created!"
@@ -146,14 +117,13 @@ class Server:
         if is_game_created:
             self._send_text_message(f"{creator_username} invited you to a game!", invited_user_username)
 
-    def handle_game_join(self, values, connection_information):
+    def handle_game_join(self, other_player_username, connection_information):
         joiner_state = self.connection_table.get_entry_state(connection_information)
         joiner_username = joiner_state.username
-        other_player_username = values["username"]
         if self.game_handler.game_exists(joiner_username, other_player_username):
             game = self.game_handler.get_game(joiner_username, other_player_username)
             if joiner_state.current_game is not None:
-                self.handle_game_quit({}, connection_information)
+                self.handle_game_quit(connection_information)
             joiner_state.current_game = game
             player_piece = game.compute_player_piece(joiner_username)
             piece_message = Message(protocol_definitions.GAME_PIECE_PROTOCOL_TYPE_CODE, (player_piece,))
@@ -163,7 +133,7 @@ class Server:
             self.connection_table.send_message_to_entry(game_message, connection_information)
             self._send_text_message(f"{joiner_username} has joined your game!", other_player_username)
 
-    def handle_game_quit(self, values, connection_information):
+    def handle_game_quit(self, connection_information):
         state = self.connection_table.get_entry_state(connection_information)
         game = state.current_game
         if game is not None:
@@ -177,7 +147,7 @@ class Server:
         opponent_outcome = game.compute_player_outcome(victory_condition, opponent_username)
         self._send_message_to_opponent(player_username, Message(protocol_definitions.GAME_ENDING_PROTOCOL_TYPE_CODE, (player_username, opponent_outcome)))
 
-    def handle_game_move(self, values, connection_information):
+    def handle_game_move(self, move_number, connection_information):
         state = self.connection_table.get_entry_state(connection_information)
         game: Game = state.current_game
         if game is None:
@@ -185,7 +155,7 @@ class Server:
         elif game.get_current_turn() != state.username:
             self._send_text_message("Not your turn.", connection_information)
         else:
-            if game.make_move(state.username, values["number"]):
+            if game.make_move(state.username, move_number):
                 game_text = game.compute_text()
                 game_message = Message(protocol_definitions.GAME_UPDATE_PROTOCOL_TYPE_CODE, (game_text,))
                 other_player_username = game.compute_other_player(state.username)
