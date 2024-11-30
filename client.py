@@ -15,7 +15,6 @@ import logging_utilities
 import protocol_definitions
 import protocol
 import game_actions
-from help_system import create_help_message
 
 CLIENT_COMMANDS = set(['quit', 'join', 'create', 'move', 'exit', 'login', 'register', 'help'])
 
@@ -25,13 +24,6 @@ def create_socket_from_address(target_address):
     sock.setblocking(False)
     sock.connect_ex(target_address)
     return sock
-
-def _parse_two_space_separated_values(text):
-    """Parses text into 2 space separated values. Returns None on failure."""
-    values = text.split(" ", maxsplit=1)
-    if len(values) != 2:
-        return None
-    return values
 
 class Client:
     #The default and maximum amount of time to wait in between reconnection attempts
@@ -48,6 +40,7 @@ class Client:
             socket_creation_function: the function used to create the socket from an address, which is settable to help with testing
         """
         self.username = None
+        self.password = None
         self.current_piece = ""
         self.reconnection_timeout = self.DEFAULT_RECONNECTION_TIMEOUT
         self.host = host
@@ -71,7 +64,7 @@ class Client:
             outcome_text = 'win'
         self.output_text(f"Your game with {opponent_username} ended with a {outcome_text}!")
         if opponent_username == self.current_opponent:
-            self._reset_game_state()
+            self.reset_game_state()
             self.output_text("This game has ended.\nYou may start another game with the 'create' command and may quit the program using the 'exit' command.")
 
     def handle_game_update(self, game_text):
@@ -181,7 +174,7 @@ class Client:
                 done = False
                 self.pause_in_between_reconnection_attempts()
 
-    def _reset_game_state(self):
+    def reset_game_state(self):
         self.current_game = None
         self.current_piece = None
         self.current_opponent = None
@@ -223,7 +216,7 @@ class Client:
             else:
                 type_code = protocol_definitions.QUIT_GAME_PROTOCOL_TYPE_CODE
                 values = []
-                self._reset_game_state()
+                self.reset_game_state()
         elif action == "join":
             if value == "":
                 self.output_text("To join a game, you must specify the username of your opponent.")
@@ -255,6 +248,16 @@ class Client:
         if type_code is not None:
             request = protocol.Message(type_code, values)
         return request
+    
+    def set_credentials(self, username, password):
+        self.username = username
+        self.password = password
+
+    def set_current_opponent(self, value):
+        self.current_opponent = value
+
+    def get_current_opponent(self):
+        return self.current_opponent
 
     def get_current_game(self):
         return self.current_game
