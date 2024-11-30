@@ -59,7 +59,9 @@ class Client:
         if self.commands.has_command(label):
             text = self.commands.get_command_help_message(label)
         else:
-            text = f"{label} is not a command. Please choose a help topic by typing 'help' followed by one of the following commands: {self.commands.get_command_names_text()}."
+            text = f"Please choose a help topic by typing 'help' followed by one of the following commands: {self.commands.get_command_names_text()}."
+            if label != "":
+                text = f"{label} is not a command. " + text
         self.output_text("Help: " + text)
 
     def handle_game_ending(self, opponent_username, outcome):
