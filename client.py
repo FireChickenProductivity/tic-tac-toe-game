@@ -17,8 +17,6 @@ import protocol
 import game_actions
 from commands import create_commands, CommandManager
 
-CLIENT_COMMANDS = set(['quit', 'join', 'create', 'move', 'exit', 'login', 'register', 'help'])
-
 def create_socket_from_address(target_address):
     """Creates a client socket that connects to the specified address"""
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -117,10 +115,6 @@ class Client:
     def handle_text_message(self, text):
         """Displays a text message from the server"""
         self.output_text("Server: " + text)
-
-    def handle_help_message(self, text):
-        """Displays a help message from the server"""
-        self.output_text("Help: " + text)
 
     def _create_protocol_callback_handler(self):
         """Creates the callback handler to let the client respond to the server"""
