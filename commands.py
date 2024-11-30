@@ -97,7 +97,25 @@ def display_help_message(client, value):
     if value:
         label = value
     help_text = create_help_message(label)
-    client.handle_help_message(help_text)
+    return help_text
+
+class CommandManager:
+    def __init__(self, commands):
+        self.commands = commands
+
+    def has_command(self, name):
+        return name in self.commands
+
+    def perform_command(self, name, value):
+        self.commands[name].perform_command(value)
+
+    def get_command_names_text(self):
+        text = ""
+        for command in self.commands:
+            if text:
+                text += ", "
+            text += command.get_name()
+        return text
 
 def create_commands(client):
     def create_command_for_client(name, help_message, action):
@@ -142,4 +160,4 @@ def create_commands(client):
     command_dictionary = {}
     for command in commands:
         command_dictionary[command.get_name()] = command
-    return command
+    return CommandManager(command_dictionary)

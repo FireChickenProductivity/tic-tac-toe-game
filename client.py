@@ -15,6 +15,7 @@ import logging_utilities
 import protocol_definitions
 import protocol
 import game_actions
+from commands import create_commands, CommandManager
 
 CLIENT_COMMANDS = set(['quit', 'join', 'create', 'move', 'exit', 'login', 'register', 'help'])
 
@@ -55,6 +56,7 @@ class Client:
         self._create_connection_handler()
         self.is_closed = False
         self.has_received_successful_message = False
+        self.commands: CommandManager = create_commands(self)
 
     def handle_game_ending(self, opponent_username, outcome):
         outcome_text = 'tie'
@@ -179,75 +181,12 @@ class Client:
         self.current_piece = None
         self.current_opponent = None
 
-    def create_request(self, action, value):
-        """Creates a request for the server from an action value pair. Returns None on failure."""
-        if action not in CLIENT_COMMANDS:
-            self.output_text('Command not recognized.')
-            return 
-        type_code = None
-        values = None
-        request = None
-        if action == "help":
-            label = ""
-            if value:
-                label = value
-            help_text = create_help_message(label)
-            self.handle_help_message(help_text)
-        elif action == "login":
-            values = _parse_two_space_separated_values(value)
-            if values is None:
-                self.output_text('When logging in, you must provide a username, press space, and provide your password!')
-            elif self.current_game is not None:
-                self.output_text("You cannot log in to an account in the middle of a game!")
-            else:
-                type_code = protocol_definitions.SIGN_IN_PROTOCOL_TYPE_CODE
-                self.username = values[0]
-        elif action == "register":
-            values = _parse_two_space_separated_values(value)
-            if values is None:
-                self.output_text('When creating an account, you must provide a username, press space, and provide your password!')
-            elif self.current_game is not None:
-                self.output_text("You cannot register an account in the middle of a game!")
-            else:
-                type_code = protocol_definitions.ACCOUNT_CREATION_PROTOCOL_TYPE_CODE
-        elif action == "quit":
-            if self.current_game is None:
-                self.output_text("You cannot quit a game when you are not in one.")
-            else:
-                type_code = protocol_definitions.QUIT_GAME_PROTOCOL_TYPE_CODE
-                values = []
-                self.reset_game_state()
-        elif action == "join":
-            if value == "":
-                self.output_text("To join a game, you must specify the username of your opponent.")
-            else:
-                type_code = protocol_definitions.JOIN_GAME_PROTOCOL_TYPE_CODE
-                values = (value,)
-                self.current_opponent = value
-        elif action == "create":
-            if value == "":
-                self.output_text("To create a game, you must specify the username of your opponent.")
-            else:
-                type_code = protocol_definitions.GAME_CREATION_PROTOCOL_TYPE_CODE
-                values = (value,)
-        elif action == "move":
-            if not self.current_game:
-                self.output_text("You cannot make a move because you are not in a game.")
-            elif not game_actions.is_valid_move_text(value):
-                self.output_text("You must provide a valid move. Use the row followed by the column, such as 'move a1'.")
-            else:
-                move_number = game_actions.convert_move_text_to_move_number(value)
-                current_piece = game_actions.compute_current_player(self.current_game)
-                if self.current_game[move_number - 1] != ' ':
-                    self.output_text("You cannot move there because that spot is already taken.")
-                elif current_piece == self.current_piece:
-                    type_code = protocol_definitions.GAME_UPDATE_PROTOCOL_TYPE_CODE
-                    values = (move_number,)
-                else:
-                    self.output_text("You cannot move because it is not your turn.")
-        if type_code is not None:
-            request = protocol.Message(type_code, values)
-        return request
+    def handle_command(self, action, value):
+        """Performs the specified client command"""
+        if self.commands.has_command(action):
+            self.commands.perform_command(action, value)
+        else:
+            self.output_text(f"The command '{action}' was not recognized. Valid commands are {self.commands.get_command_names_text()}")
     
     def set_credentials(self, username, password):
         self.username = username
@@ -265,7 +204,7 @@ class Client:
     def get_current_piece(self):
         return self.current_piece
 
-    def create_request_from_text_input(self, text: str):
+    def perform_command_from_text_input(self, text: str):
         """Creates a request for the server from user input text"""
         text = text.strip()
         action_value_split = text.split(' ', maxsplit=1)
@@ -274,8 +213,7 @@ class Client:
         #If an argument is detected for the action, put it inside value
         if len(action_value_split) > 1:
             value = action_value_split[1]
-        request = self.create_request(action, value)
-        return request
+        self.handle_command(action, value)
     
     def run_selector_loop(self):
         """Responds to socket write and read events"""
@@ -313,9 +251,7 @@ def perform_user_commands_through_connection(client: Client):
         if user_input == 'exit':
             done = True
         else:
-            request = client.create_request_from_text_input(user_input)
-            if request:
-                client.send_message(request)
+            client.perform_command_from_text_input(user_input)
     client.close()
 
 def splash():

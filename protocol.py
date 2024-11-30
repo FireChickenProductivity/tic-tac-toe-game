@@ -5,10 +5,12 @@ from protocol_classes import *
 
 class Message:
     """Class for keeping track of type the code and message values for a message"""
-    def __init__(self, type_code, values):
+    def __init__(self, type_code, values=None):
         self.type_code = type_code
         self.values = values
-        if type(self.values) not in [tuple, list]:
+        if values is None:
+            self.values = []
+        elif type(self.values) not in [tuple, list]:
             self.values = (self.values,)
 
     def __str__(self):
