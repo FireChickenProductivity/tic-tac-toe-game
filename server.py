@@ -105,22 +105,31 @@ class Server:
             self.usernames_to_connections[username] = connection_information
         self._send_text_message(text, connection_information)
 
+    def _validate_user_logged_in(self, state, connection_information):
+        """Returns true if the user has logged in and otherwise returns false and notifies the user that they must log in"""
+        if state.username:
+            return True
+        else:
+            self._send_text_message("You must login before using that command!", connection_information)
+            return False
+
     def handle_game_creation(self, invited_user_username, connection_information):
         creator_state = self.connection_table.get_entry_state(connection_information)
-        creator_username = creator_state.username
-        is_game_created = self.game_handler.create_game(creator_username, invited_user_username)
-        if is_game_created:
-            text = "The game was created!"
-        else:
-            text = "The game could not be created."
-        self._send_text_message(text, connection_information)
-        if is_game_created:
-            self._send_text_message(f"{creator_username} invited you to a game!", invited_user_username)
+        if self._validate_user_logged_in(creator_state, connection_information):
+            creator_username = creator_state.username
+            is_game_created = self.game_handler.create_game(creator_username, invited_user_username)
+            if is_game_created:
+                text = "The game was created!"
+            else:
+                text = "The game could not be created."
+            self._send_text_message(text, connection_information)
+            if is_game_created:
+                self._send_text_message(f"{creator_username} invited you to a game!", invited_user_username)
 
     def handle_game_join(self, other_player_username, connection_information):
         joiner_state = self.connection_table.get_entry_state(connection_information)
         joiner_username = joiner_state.username
-        if self.game_handler.game_exists(joiner_username, other_player_username):
+        if self._validate_user_logged_in(joiner_state, connection_information) and self.game_handler.game_exists(joiner_username, other_player_username):
             game = self.game_handler.get_game(joiner_username, other_player_username)
             if joiner_state.current_game is not None:
                 self.handle_game_quit(connection_information)
