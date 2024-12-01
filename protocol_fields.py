@@ -18,17 +18,26 @@ class ConstantLengthProtocolField(ProtocolField):
         Defines a constant length protocol field.
         struct_text: the text used with struct to pack and unpack values for this field
         size: the size of the field in bytes
+        encoding_function: an optional function for encoding the value before packing
+        decoding_function: an optional function for decoding the value after packing
     """
     
-    def __init__(self, struct_text: str, size: int):
+    def __init__(self, struct_text: str, size: int, encoding_function=None, decoding_function=decode_value):
         self.struct_text = struct_text
         self.size = size
+        self.encoding_function = encoding_function
+        self.decoding_function = decoding_function
 
     def pack(self, value):
+        if self.encoding_function:
+            value = self.encoding_function(value)
         return struct.pack(">" + self.compute_struct_text(), value)
 
     def unpack(self, input_bytes):
-        return decode_value(struct.unpack(">" + self.compute_struct_text(), input_bytes)[0])
+        value = struct.unpack(">" + self.compute_struct_text(), input_bytes)[0]
+        if self.decoding_function:
+            value = self.decoding_function(value)
+        return value
 
     def compute_struct_text(self):
         """Returns the text used to pack or unpack values of this field with the struct module"""
