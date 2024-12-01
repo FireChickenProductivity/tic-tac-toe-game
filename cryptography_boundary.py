@@ -1,5 +1,8 @@
 import cryptography
 
+def load_public_key(name):
+    pass
+
 def create_public_private_key_pair(public_key_name, private_key_name):
     pass
 
