@@ -30,7 +30,7 @@ class MessageProtocol:
         values_bytes = pack_type_code(self.type_code)
         for index, field in enumerate(self.fields):
             if field.is_fixed_length():
-                field_bytes = struct.pack(">" + field.compute_struct_text(), args[index])
+                field_bytes = field.pack(args[index])
             else:
                 field_bytes = struct.pack(">" + field.compute_struct_text_from_value(args[index]), args[index])
                 size = len(field_bytes)
@@ -86,7 +86,7 @@ class MessageProtocol:
         field = self.fields[i]
         length = self.compute_fixed_length_field_length(i)
         relevant_bytes = input_bytes[starting_index: starting_index + length]
-        return decode_value(struct.unpack(">" + field.compute_struct_text(), relevant_bytes)[0])
+        return field.unpack(relevant_bytes)
     
     def get_number_of_fields(self):
         """Returns the number of fields corresponding to the protocol"""

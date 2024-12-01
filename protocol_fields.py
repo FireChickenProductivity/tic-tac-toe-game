@@ -1,4 +1,5 @@
-
+import struct
+from packing_utilities import decode_value
 
 class ProtocolField:
     """
@@ -22,6 +23,12 @@ class ConstantLengthProtocolField(ProtocolField):
     def __init__(self, struct_text: str, size: int):
         self.struct_text = struct_text
         self.size = size
+
+    def pack(self, value):
+        return struct.pack(">" + self.compute_struct_text(), value)
+
+    def unpack(self, input_bytes):
+        return decode_value(struct.unpack(">" + self.compute_struct_text(), input_bytes)[0])
 
     def compute_struct_text(self):
         """Returns the text used to pack or unpack values of this field with the struct module"""
