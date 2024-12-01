@@ -17,6 +17,7 @@ from game_manager import GameHandler, Game
 from connection_table import ConnectionTable, ConnectionTableEntry
 from database_management import Account, create_database_at_path, retrieve_account_with_name_from_database_at_path, insert_account_into_database_at_path
 import sqlite3 #Imported for database exceptions only
+import cryptography
 
 MUST_LOG_IN_TEXT = "You must login before using that command!"
 
