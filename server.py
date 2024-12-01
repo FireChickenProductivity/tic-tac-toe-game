@@ -133,14 +133,16 @@ class Server:
             self.connection_table.send_message_to_entry(game_message, connection_information)
             self._send_text_message(f"{joiner_username} has joined your game!", other_player_username)
 
-    def _notify_opponent_of_player_exit(self, connection_information):
-        pass
+    def _notify_opponent_of_player_exit(self, connection_information, state):
+        """Notifies the opponent of the current player exiting."""
+        if state.current_game is not None:
+            self._send_text_message_to_opponent(f"{state.username} has left your game!", state.username)
+        
 
     def handle_game_quit(self, connection_information):
         state = self.connection_table.get_entry_state(connection_information)
-        game = state.current_game
-        if game is not None:
-            self._send_text_message_to_opponent(f"{state.username} has left your game!", state.username)
+        if state.current_game is not None:
+            self._notify_opponent_of_player_exit(connection_information, state)
             state.current_game = None
         else:
             self._send_text_message(f"You are not in a game, so you cannot quit one.", connection_information)
@@ -179,6 +181,7 @@ class Server:
     def cleanup_connection(self, connection_information):
         """Performs cleanup when a connection gets closed"""
         state = self.connection_table.get_entry_state(connection_information)
+        self._notify_opponent_of_player_exit(connection_information, state)
         self.connection_table.remove_entry(connection_information)
         username = state.username
         if username is not None and username in self.usernames_to_connections:
