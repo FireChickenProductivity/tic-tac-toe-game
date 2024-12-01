@@ -166,6 +166,10 @@ class Client:
         if self.reconnection_timeout < self.MAXIMUM_RECONNECTION_TIMEOUT:
             self.reconnection_timeout += 1
 
+    def login(self):
+        credentials = (self.username, self.password)
+        self.send_message(protocol.Message(protocol_definitions.SIGN_IN_PROTOCOL_TYPE_CODE, credentials))
+
     def reconnect(self):
         """Attempts to reconnect to the server"""
         self.close(should_reconnect=True)
@@ -174,6 +178,8 @@ class Client:
             try:
                 print("Trying to reconnect...")
                 self._create_connection_handler()
+                if self.has_attempted_login():
+                    self.login()
                 done = True
             except connection_handler.PeerDisconnectionException:
                 done = False
