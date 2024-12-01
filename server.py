@@ -18,6 +18,8 @@ from connection_table import ConnectionTable, ConnectionTableEntry
 from database_management import Account, create_database_at_path, retrieve_account_with_name_from_database_at_path, insert_account_into_database_at_path
 import sqlite3 #Imported for database exceptions only
 
+MUST_LOG_IN_TEXT = "You must login before using that command!"
+
 class AssociatedConnectionState:
     """Data structure for holding variables associated with a connection"""
     def __init__(self):
@@ -110,7 +112,7 @@ class Server:
         if state.username:
             return True
         else:
-            self._send_text_message("You must login before using that command!", connection_information)
+            self._send_text_message(MUST_LOG_IN_TEXT, connection_information)
             return False
 
     def handle_game_creation(self, invited_user_username, connection_information):

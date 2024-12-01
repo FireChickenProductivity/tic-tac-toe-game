@@ -3,9 +3,13 @@ from protocol import Message
 import game_actions
 import unittest
 from testing_utilities import *
+from server import MUST_LOG_IN_TEXT
 
 def create_text_message(text: str):
     return Message(protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE, [text])
+
+def create_must_login_message():
+    return create_text_message(MUST_LOG_IN_TEXT)
 
 def create_game_update_message(text: str):
     EMPTY_GAME_BOARD_MESSAGE = Message(protocol_definitions.GAME_UPDATE_PROTOCOL_TYPE_CODE, text)
@@ -231,6 +235,19 @@ class TestCommunication(unittest.TestCase):
         testcase.run()
         expected_alice_messages = [SkipItem()]*3 + [create_text_message("Bob has left your game!")] + [SkipItem()]*2
         testcase.assert_received_values_match_log(expected_alice_messages, "Alice")
+
+    def _server_handles_command_when_not_logged_in(self, command_text):
+        testcase = TestCase()
+        testcase.buffer_client_commands("Bob", [command_text, 1])
+        testcase.run()
+        expected_bob_messages = [create_must_login_message()]
+        testcase.assert_received_values_match_log(expected_bob_messages, "Bob")
+
+    def test_server_handles_joining_when_not_logged_in(self):
+        self._server_handles_command_when_not_logged_in("join Alice")
+
+    def test_server_handles_creating_when_not_logged_in(self):
+        self._server_handles_command_when_not_logged_in("create Alice")
 
 if __name__ == '__main__':
     unittest.main()
