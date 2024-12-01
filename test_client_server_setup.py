@@ -1,7 +1,6 @@
 import protocol_definitions
 from protocol import Message
 import game_actions
-import connection_handler
 import unittest
 from testing_utilities import *
 
@@ -107,7 +106,7 @@ def compute_sequential_game_playing_update_messages(state: str):
         messages.append(create_move_message(partial_state))
     return messages
 
-class TestMocking(unittest.TestCase):
+class TestClient(unittest.TestCase):
     def test_local_help_system(self):
         testcase = TestCase()
         testcase.buffer_client_commands("Bob", ["help"])
@@ -116,6 +115,7 @@ class TestMocking(unittest.TestCase):
         print('output', output)
         testcase.assert_values_match_output([ContainsMatcher("Help")], 'Bob')
 
+class TestCommunication(unittest.TestCase):
     def test_game_creation(self):
         expected_messages = [
             SkipItem(), 
