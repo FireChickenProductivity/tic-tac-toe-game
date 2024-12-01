@@ -1,3 +1,4 @@
+import os
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives import hashes
@@ -43,6 +44,11 @@ def load_public_private_key_pair(public_key_name, private_key_name):
     public_key = load_public_key(public_key_name)
     private_key = load_private_key(private_key_name)
     return public_key, private_key
+
+def obtain_public_private_key_pair(public_key_name, private_key_name):
+    if os.path.exists(public_key_name) and os.path.exists(private_key_name):
+        return load_public_private_key_pair(public_key_name, private_key_name)
+    return create_public_private_key_pair(public_key_name, private_key_name)
 
 BLOCK_SIZE = 64
 
