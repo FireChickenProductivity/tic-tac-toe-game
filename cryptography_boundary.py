@@ -1,3 +1,5 @@
+# This is what the rest of the system uses for dealing with encryption
+
 import os
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
@@ -7,9 +9,17 @@ from cryptography.hazmat.primitives.asymmetric import padding
 RSA_KEY_SIZE = 4096
 RSA_PUBLIC_EXPONENT = 65537
 
+# Convenience functions
+
 def _read_bytes_at_path(path):
     with open(path, "rb") as file:
         return file.read()
+
+def _write_bytes_at_path(data, path):
+    with open(path, "wb") as file:
+        file.write(data)
+
+# Functions for dealing with a symmetric encryption
 
 def load_private_key(name):
     key_bytes = _read_bytes_at_path(name)
@@ -20,10 +30,6 @@ def load_public_key(name):
     key_bytes = _read_bytes_at_path(name)
     key = serialization.load_pem_public_key(key_bytes)
     return key
-
-def _write_bytes_at_path(data, path):
-    with open(path, "wb") as file:
-        file.write(data)
 
 def store_public_key_at_path(key, path):
     representation = key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo)
@@ -50,6 +56,14 @@ def obtain_public_private_key_pair(public_key_name, private_key_name):
         return load_public_private_key_pair(public_key_name, private_key_name)
     return create_public_private_key_pair(public_key_name, private_key_name)
 
+def encrypt_data_using_public_key(data, key):
+    return key.encrypt(data, _create_padding_algorithm())
+
+def decrypt_data_using_private_key(data, key):
+    return key.decrypt(data, _create_padding_algorithm())
+
+# Functions for dealing with symmetric key encryption
+
 BLOCK_SIZE = 64
 
 def create_symmetric_key():
@@ -61,12 +75,6 @@ def _create_padding_algorithm():
             algorithm=hashes.SHA256(),
             label=None
         )
-
-def encrypt_data_using_public_key(data, key):
-    return key.encrypt(data, _create_padding_algorithm())
-
-def decrypt_data_using_private_key(data, key):
-    return key.decrypt(data, _create_padding_algorithm())
 
 def encrypt_data_using_symmetric_key(data, key):
     pass
