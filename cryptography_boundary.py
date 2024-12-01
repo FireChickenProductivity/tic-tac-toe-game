@@ -6,8 +6,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-
-
+from cryptography.hazmat.primitives import padding
 
 RSA_KEY_SIZE = 4096
 RSA_PUBLIC_EXPONENT = 65537
@@ -75,11 +74,36 @@ def decrypt_data_using_private_key(data, key):
 # Functions for dealing with symmetric key encryption
 
 BLOCK_SIZE = 16
+BLOCKSIZE_IN_BITS = BLOCK_SIZE*8
+
+def perform_symmetric_cryptographic_operation(data, operator):
+    return operator.update(data) + operator.finalize()
+
+def perform_double_symmetric_cryptographic_operation(data, first_operator, second_operator):
+    data = perform_symmetric_cryptographic_operation(data, first_operator)
+    data = perform_symmetric_cryptographic_operation(data, second_operator)
+    return data
+
+class PaddingEncryptor:
+    def __init__(self, cipher):
+        self.encryptor = cipher.encryptor()
+        self.padder = padding.PKCS7(BLOCKSIZE_IN_BITS).padder()
+    
+    def __call__(self, data):
+        return perform_double_symmetric_cryptographic_operation(data, self.padder, self.encryptor)
+
+class PaddingDecryptor:
+    def __init__(self, cipher):
+        self.decryptor = cipher.decryptor()
+        self.unpadder = padding.PKCS7(BLOCKSIZE_IN_BITS).unpadder()
+
+    def __call__(self, data):
+        return perform_double_symmetric_cryptographic_operation(data, self.decryptor, self.unpadder)
 
 def create_symmetric_key_encryptor_and_decryptor_from_number_and_input_vector(number, input_vector):
     cipher = Cipher(algorithms.AES(number), modes.CBC(input_vector))
-    encryptor = cipher.encryptor()
-    decryptor = cipher.decryptor()
+    encryptor = PaddingEncryptor(cipher)
+    decryptor = PaddingDecryptor(cipher)
     return encryptor, decryptor
 
 def create_symmetric_key_parameters():
@@ -87,6 +111,5 @@ def create_symmetric_key_parameters():
     input_vector = os.urandom(16)
     return number, input_vector
 
-def perform_symmetric_cryptographic_operation(data, operator):
-    return operator.update(data) + operator.finalize()
+
 
