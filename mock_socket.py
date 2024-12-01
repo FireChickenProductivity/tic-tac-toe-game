@@ -46,6 +46,7 @@ class MockTCPSocket:
         self.open_for_writing = False
         self.has_closed = False
         self.peer = None
+        self.has_received_termination_message = False
     
     def send(self, message_bytes):
         """Simulates sending the following bytes and returns the number of bytes sent"""
@@ -70,6 +71,7 @@ class MockTCPSocket:
 
     def close(self):
         """Closes the connection"""
+        self.send(b"")
         self.open_for_reading = False
         self.open_for_writing = False
         self.has_closed = True
@@ -77,7 +79,6 @@ class MockTCPSocket:
     def connect_ex(self, address):
         """Connects to the specified address"""
         self.peer = self.internet.connect_to_listening_socket(address, self.address)
-        print('self.peer', self.peer)
 
     def set_peer(self, peer):
         self.peer = peer
@@ -87,6 +88,8 @@ class MockTCPSocket:
 
     def receive_message_from_socket(self, message):
         self.receive_buffer += message
+        if message == b"":
+            self.has_received_termination_message = True
 
     def get_address(self):
         return self.address
@@ -95,7 +98,7 @@ class MockTCPSocket:
         return self.peer.get_address()
 
     def has_received_bytes(self):
-        return len(self.receive_buffer) > 0
+        return len(self.receive_buffer) > 0 or self.has_received_termination_message
 
     def is_listening_socket(self):
         return False
@@ -196,7 +199,9 @@ class MockSelector:
                 return operation(key)
 
     def unregister(self, socket):
-        self.apply_operation_on_key_corresponding_to_socket(self.sockets.pop, socket)
+        def perform_un_registration(key):
+            self.sockets.pop(key)
+        self.apply_operation_on_key_corresponding_to_socket(perform_un_registration, socket)
 
     def modify(self, socket, mode, data):
         is_mode_matching_both = mode == selectors.EVENT_READ | selectors.EVENT_WRITE

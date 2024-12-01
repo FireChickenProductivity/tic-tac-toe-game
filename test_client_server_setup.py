@@ -224,5 +224,13 @@ class TestCommunication(unittest.TestCase):
         expected_alice_messages = [SkipItem()]*6
         testcase.assert_received_values_match_log(expected_alice_messages, "Alice")
 
+    def test_exiting_notifies_of_leaving(self):
+        testcase = TestCase(should_perform_automatic_login=True)
+        testcase.buffer_client_commands("Bob", ["create Alice", 2, "join Alice", 4, 'exit'])
+        testcase.buffer_client_commands("Alice", [4, 'join Bob', 6])
+        testcase.run()
+        expected_alice_messages = [SkipItem()]*3 + [create_text_message("Bob has left your game!")] + [SkipItem()]*2
+        testcase.assert_received_values_match_log(expected_alice_messages, "Alice")
+
 if __name__ == '__main__':
     unittest.main()

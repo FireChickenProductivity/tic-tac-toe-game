@@ -177,15 +177,16 @@ class Server:
             else:
                 self._send_text_message("This tile is already taken.", connection_information)
 
-
     def cleanup_connection(self, connection_information):
         """Performs cleanup when a connection gets closed"""
-        state = self.connection_table.get_entry_state(connection_information)
-        self._notify_opponent_of_player_exit(connection_information, state)
-        self.connection_table.remove_entry(connection_information)
-        username = state.username
-        if username is not None and username in self.usernames_to_connections:
-            self.usernames_to_connections.pop(username, None)
+        entry = self.connection_table.get_entry(connection_information)
+        if entry is not None:
+            state = entry.get_state()
+            self._notify_opponent_of_player_exit(connection_information, state)
+            self.connection_table.remove_entry(connection_information)
+            username = state.username
+            if username is not None and username in self.usernames_to_connections:
+                self.usernames_to_connections.pop(username, None)
 
     def create_connection_handler(self, selector, connection, address):
         connection_information = connection_handler.ConnectionInformation(connection, address)
