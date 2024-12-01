@@ -31,5 +31,5 @@ SERVER_PROTOCOL_MAP = protocol.ProtocolMap([
     protocol.create_username_message_protocol(GAME_CREATION_PROTOCOL_TYPE_CODE),
     protocol.MessageProtocol(QUIT_GAME_PROTOCOL_TYPE_CODE),
     protocol.create_single_byte_nonnegative_integer_message_protocol(GAME_UPDATE_PROTOCOL_TYPE_CODE),
-    protocol.create_text_message_protocol(SYMMETRIC_KEY_TRANSMISSION_PROTOCOL_TYPE_CODE),
+    protocol.create_symmetric_key_message_protocol(SYMMETRIC_KEY_TRANSMISSION_PROTOCOL_TYPE_CODE),
 ])
