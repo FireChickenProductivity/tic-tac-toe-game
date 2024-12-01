@@ -31,10 +31,15 @@ class ConstantLengthProtocolField(ProtocolField):
     def pack(self, value):
         if self.encoding_function:
             value = self.encoding_function(value)
-        return struct.pack(">" + self.compute_struct_text(), value)
+        text = ">" + self.compute_struct_text()
+        if type(value) == list:
+            return struct.pack(text, *value)
+        return struct.pack(text, value)
 
     def unpack(self, input_bytes):
-        value = struct.unpack(">" + self.compute_struct_text(), input_bytes)[0]
+        value = struct.unpack(">" + self.compute_struct_text(), input_bytes)
+        if len(value) == 1:
+            value = value[0]
         if self.decoding_function:
             value = self.decoding_function(value)
         return value
@@ -110,10 +115,10 @@ def create_single_character_string_protocol_field():
 
 def create_large_fixed_length_integer_protocol_field(size_in_bytes):
     struct_text = f"B"*size_in_bytes
-    def encode_value(value: int):
-        return value.to_bytes(size_in_bytes, "big")
-    def decode_value(value: bytes):
-        return int.from_bytes(value, "big")
+    def encode_value(value: bytes):
+        return [individual_byte for individual_byte in value]
+    def decode_value(value):
+        return bytes(value)
     return ConstantLengthProtocolField(struct_text, size_in_bytes, encode_value, decode_value)
 
 def create_sixteen_byte_integer_protocol_field():
