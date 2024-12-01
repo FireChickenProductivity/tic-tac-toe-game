@@ -18,10 +18,12 @@ class TestEncryption(unittest.TestCase):
         encryption_function, decryption_function = create_symmetric_key_encryptor_and_decryptor_from_number_and_input_vector(*parameters)
         initial_data = b"Another message"
         encrypted = encryption_function(initial_data)
+        print(len(encrypted))
         decrypted = decryption_function(encrypted)
         self.assertEqual(initial_data, decrypted)
         second_encryption = encryption_function(initial_data)
         second_decryption = decryption_function(second_encryption)
+        self.assertEqual(second_decryption, decrypted)
 
 if __name__ == '__main__':
     unittest.main()
