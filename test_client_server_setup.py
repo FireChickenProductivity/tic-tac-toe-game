@@ -208,5 +208,21 @@ class TestCommunication(unittest.TestCase):
     def test_first_player_loss(self):
         self.perform_gameplay_test("OXXXO   O", game_actions.LOSS, game_actions.VICTORY)
 
+    def test_absent_player_does_not_receive_moves(self):
+        testcase = TestCase(should_perform_automatic_login=True)
+        testcase.buffer_client_commands("Bob", ["create Alice", 2, "join Alice", 4, 'move a1', 5])
+        testcase.create_client("Alice")
+        testcase.run()
+        expected_alice_messages = [SkipItem()]*3
+        testcase.assert_received_values_match_log(expected_alice_messages, "Alice")
+
+    def test_quitting_player_does_not_receive_moves(self):
+        testcase = TestCase(should_perform_automatic_login=True)
+        testcase.buffer_client_commands("Bob", ["create Alice", 3, "join Alice", 6, 'move a1', 7, 'quit'])
+        testcase.buffer_client_commands("Alice", [2, "join Bob", 5, 'quit', 6])
+        testcase.run()
+        expected_alice_messages = [SkipItem()]*6
+        testcase.assert_received_values_match_log(expected_alice_messages, "Alice")
+
 if __name__ == '__main__':
     unittest.main()
