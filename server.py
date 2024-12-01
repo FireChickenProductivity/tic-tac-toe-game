@@ -18,6 +18,8 @@ from connection_table import ConnectionTable, ConnectionTableEntry
 from database_management import Account, create_database_at_path, retrieve_account_with_name_from_database_at_path, insert_account_into_database_at_path
 import sqlite3 #Imported for database exceptions only
 
+MUST_LOG_IN_TEXT = "You must login before using that command!"
+
 class AssociatedConnectionState:
     """Data structure for holding variables associated with a connection"""
     def __init__(self):
@@ -105,22 +107,31 @@ class Server:
             self.usernames_to_connections[username] = connection_information
         self._send_text_message(text, connection_information)
 
+    def _validate_user_logged_in(self, state, connection_information):
+        """Returns true if the user has logged in and otherwise returns false and notifies the user that they must log in"""
+        if state.username:
+            return True
+        else:
+            self._send_text_message(MUST_LOG_IN_TEXT, connection_information)
+            return False
+
     def handle_game_creation(self, invited_user_username, connection_information):
         creator_state = self.connection_table.get_entry_state(connection_information)
-        creator_username = creator_state.username
-        is_game_created = self.game_handler.create_game(creator_username, invited_user_username)
-        if is_game_created:
-            text = "The game was created!"
-        else:
-            text = "The game could not be created."
-        self._send_text_message(text, connection_information)
-        if is_game_created:
-            self._send_text_message(f"{creator_username} invited you to a game!", invited_user_username)
+        if self._validate_user_logged_in(creator_state, connection_information):
+            creator_username = creator_state.username
+            is_game_created = self.game_handler.create_game(creator_username, invited_user_username)
+            if is_game_created:
+                text = "The game was created!"
+            else:
+                text = "The game could not be created."
+            self._send_text_message(text, connection_information)
+            if is_game_created:
+                self._send_text_message(f"{creator_username} invited you to a game!", invited_user_username)
 
     def handle_game_join(self, other_player_username, connection_information):
         joiner_state = self.connection_table.get_entry_state(connection_information)
         joiner_username = joiner_state.username
-        if self.game_handler.game_exists(joiner_username, other_player_username):
+        if self._validate_user_logged_in(joiner_state, connection_information) and self.game_handler.game_exists(joiner_username, other_player_username):
             game = self.game_handler.get_game(joiner_username, other_player_username)
             if joiner_state.current_game is not None:
                 self.handle_game_quit(connection_information)
@@ -133,11 +144,17 @@ class Server:
             self.connection_table.send_message_to_entry(game_message, connection_information)
             self._send_text_message(f"{joiner_username} has joined your game!", other_player_username)
 
+    def _notify_opponent_of_player_exit(self, connection_information, state):
+        """Notifies the opponent of the current player exiting."""
+        if state.current_game is not None:
+            self._send_text_message_to_opponent(f"{state.username} has left your game!", state.username)
+        
+
     def handle_game_quit(self, connection_information):
         state = self.connection_table.get_entry_state(connection_information)
-        game = state.current_game
-        if game is not None:
-            self._send_text_message_to_opponent(f"{state.username} has left your game!", state.username)
+        if state.current_game is not None:
+            self._notify_opponent_of_player_exit(connection_information, state)
+            state.current_game = None
         else:
             self._send_text_message(f"You are not in a game, so you cannot quit one.", connection_information)
 
@@ -171,14 +188,16 @@ class Server:
             else:
                 self._send_text_message("This tile is already taken.", connection_information)
 
-
     def cleanup_connection(self, connection_information):
         """Performs cleanup when a connection gets closed"""
-        state = self.connection_table.get_entry_state(connection_information)
-        self.connection_table.remove_entry(connection_information)
-        username = state.username
-        if username is not None and username in self.usernames_to_connections:
-            self.usernames_to_connections.pop(username, None)
+        entry = self.connection_table.get_entry(connection_information)
+        if entry is not None:
+            state = entry.get_state()
+            self._notify_opponent_of_player_exit(connection_information, state)
+            self.connection_table.remove_entry(connection_information)
+            username = state.username
+            if username is not None and username in self.usernames_to_connections:
+                self.usernames_to_connections.pop(username, None)
 
     def create_connection_handler(self, selector, connection, address):
         connection_information = connection_handler.ConnectionInformation(connection, address)

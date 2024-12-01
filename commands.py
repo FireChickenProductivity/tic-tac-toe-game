@@ -52,12 +52,16 @@ def make_move(client, value):
 def create_game(client, value):
     if value == "":
         return "To create a game, you must specify the username of your opponent."
+    elif not client.has_attempted_login():
+        return "You must log in before creating a game!"
     else:
         return Message(protocol_definitions.GAME_CREATION_PROTOCOL_TYPE_CODE, value)
 
 def join_game(client, value):
     if value == "":
         return "To join a game, you must specify the username of your opponent."
+    elif not client.has_attempted_login():
+        return "You must log in before joining a game!"
     else:
         client.set_current_opponent(value)
         return Message(protocol_definitions.JOIN_GAME_PROTOCOL_TYPE_CODE, value)
@@ -82,13 +86,14 @@ def register_account(client, value):
 
 def login(client, value):
     values = _parse_two_space_separated_values(value)
+    result = None
     if values is None:
         result = 'When logging in, you must provide a username, press space, and provide your password!'
     elif client.get_current_game() is not None:
         result = "You cannot log in to an account in the middle of a game!"
     else:
         client.set_credentials(*values)
-        result = Message(protocol_definitions.SIGN_IN_PROTOCOL_TYPE_CODE, values)
+        client.login()
     return result
 
 def output_help_message(client, value):

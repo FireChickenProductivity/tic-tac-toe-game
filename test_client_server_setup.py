@@ -1,12 +1,15 @@
 import protocol_definitions
 from protocol import Message
 import game_actions
-import connection_handler
 import unittest
 from testing_utilities import *
+from server import MUST_LOG_IN_TEXT
 
 def create_text_message(text: str):
     return Message(protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE, [text])
+
+def create_must_login_message():
+    return create_text_message(MUST_LOG_IN_TEXT)
 
 def create_game_update_message(text: str):
     EMPTY_GAME_BOARD_MESSAGE = Message(protocol_definitions.GAME_UPDATE_PROTOCOL_TYPE_CODE, text)
@@ -107,7 +110,7 @@ def compute_sequential_game_playing_update_messages(state: str):
         messages.append(create_move_message(partial_state))
     return messages
 
-class TestMocking(unittest.TestCase):
+class TestClient(unittest.TestCase):
     def test_local_help_system(self):
         testcase = TestCase()
         testcase.buffer_client_commands("Bob", ["help"])
@@ -116,6 +119,7 @@ class TestMocking(unittest.TestCase):
         print('output', output)
         testcase.assert_values_match_output([ContainsMatcher("Help")], 'Bob')
 
+class TestCommunication(unittest.TestCase):
     def test_game_creation(self):
         expected_messages = [
             SkipItem(), 
@@ -207,6 +211,43 @@ class TestMocking(unittest.TestCase):
 
     def test_first_player_loss(self):
         self.perform_gameplay_test("OXXXO   O", game_actions.LOSS, game_actions.VICTORY)
+
+    def test_absent_player_does_not_receive_moves(self):
+        testcase = TestCase(should_perform_automatic_login=True)
+        testcase.buffer_client_commands("Bob", ["create Alice", 2, "join Alice", 4, 'move a1', 5])
+        testcase.create_client("Alice")
+        testcase.run()
+        expected_alice_messages = [SkipItem()]*3
+        testcase.assert_received_values_match_log(expected_alice_messages, "Alice")
+
+    def test_quitting_player_does_not_receive_moves(self):
+        testcase = TestCase(should_perform_automatic_login=True)
+        testcase.buffer_client_commands("Bob", ["create Alice", 3, "join Alice", 6, 'move a1', 7, 'quit'])
+        testcase.buffer_client_commands("Alice", [2, "join Bob", 5, 'quit', 6])
+        testcase.run()
+        expected_alice_messages = [SkipItem()]*6
+        testcase.assert_received_values_match_log(expected_alice_messages, "Alice")
+
+    def test_exiting_notifies_of_leaving(self):
+        testcase = TestCase(should_perform_automatic_login=True)
+        testcase.buffer_client_commands("Bob", ["create Alice", 2, "join Alice", 4, 'exit'])
+        testcase.buffer_client_commands("Alice", [4, 'join Bob', 6])
+        testcase.run()
+        expected_alice_messages = [SkipItem()]*3 + [create_text_message("Bob has left your game!")] + [SkipItem()]*2
+        testcase.assert_received_values_match_log(expected_alice_messages, "Alice")
+
+    def _server_handles_command_when_not_logged_in(self, command):
+        testcase = TestCase()
+        testcase.buffer_client_commands("Bob", [command, 1])
+        testcase.run()
+        expected_bob_messages = [create_must_login_message()]
+        testcase.assert_received_values_match_log(expected_bob_messages, "Bob")
+
+    def test_server_handles_joining_when_not_logged_in(self):
+        self._server_handles_command_when_not_logged_in(Message(protocol_definitions.JOIN_GAME_PROTOCOL_TYPE_CODE, "Alice"))
+
+    def test_server_handles_creating_when_not_logged_in(self):
+        self._server_handles_command_when_not_logged_in(Message(protocol_definitions.GAME_CREATION_PROTOCOL_TYPE_CODE, 'Alice'))
 
 if __name__ == '__main__':
     unittest.main()

@@ -73,7 +73,10 @@ class TestClientHandler:
         self.commands.append(command)
 
     def perform_command(self, command: str):
-        self.client.perform_command_from_text_input(command)
+        if command == 'exit':
+            self.close()
+        else:
+            self.client.perform_command_from_text_input(command)
 
     def send_message(self, message):
         self.client.send_message(message)
@@ -82,6 +85,8 @@ class TestClientHandler:
         for command in self.commands:
             if type(command) == str:
                 self.perform_command(command)
+            elif type(command) == Message:
+                self.send_message(command)
             else:
                 command(self)
     
