@@ -4,9 +4,10 @@ import os
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import asymmetric
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives import padding
+
 
 RSA_KEY_SIZE = 4096
 RSA_PUBLIC_EXPONENT = 65537
@@ -59,8 +60,8 @@ def obtain_public_private_key_pair(public_key_name, private_key_name):
     return create_public_private_key_pair(public_key_name, private_key_name)
 
 def _create_padding_algorithm():
-    return padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+    return asymmetric.padding.OAEP(
+            mgf=asymmetric.padding.MGF1(algorithm=hashes.SHA256()),
             algorithm=hashes.SHA256(),
             label=None
         )
