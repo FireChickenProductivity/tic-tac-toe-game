@@ -86,13 +86,14 @@ def register_account(client, value):
 
 def login(client, value):
     values = _parse_two_space_separated_values(value)
+    result = None
     if values is None:
         result = 'When logging in, you must provide a username, press space, and provide your password!'
     elif client.get_current_game() is not None:
         result = "You cannot log in to an account in the middle of a game!"
     else:
         client.set_credentials(*values)
-        result = Message(protocol_definitions.SIGN_IN_PROTOCOL_TYPE_CODE, values)
+        client.login()
     return result
 
 def output_help_message(client, value):
