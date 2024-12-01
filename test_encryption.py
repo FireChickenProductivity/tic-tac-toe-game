@@ -13,5 +13,15 @@ class TestEncryption(unittest.TestCase):
         decrypted = decrypt_data_using_private_key(encrypted, private)
         self.assertEqual(initial_data, decrypted)
 
+    def test_symmetric_encryption(self):
+        parameters = create_symmetric_key_parameters()
+        encryption_function, decryption_function = create_symmetric_key_encryptor_and_decryptor_from_number_and_input_vector(*parameters)
+        initial_data = b"Another message"
+        encrypted = encryption_function(initial_data)
+        decrypted = decryption_function(encrypted)
+        self.assertEqual(initial_data, decrypted)
+        second_encryption = encryption_function(initial_data)
+        second_decryption = decryption_function(second_encryption)
+
 if __name__ == '__main__':
     unittest.main()

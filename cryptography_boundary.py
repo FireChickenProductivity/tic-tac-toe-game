@@ -11,6 +11,7 @@ from cryptography.hazmat.primitives import padding
 
 RSA_KEY_SIZE = 4096
 RSA_PUBLIC_EXPONENT = 65537
+RSA_BLOCK_SIZE = 256
 
 # Convenience functions
 
@@ -87,19 +88,21 @@ def perform_double_symmetric_cryptographic_operation(data, first_operator, secon
 
 class PaddingEncryptor:
     def __init__(self, cipher):
-        self.encryptor = cipher.encryptor()
-        self.padder = padding.PKCS7(BLOCKSIZE_IN_BITS).padder()
+        self.cipher = cipher
     
     def __call__(self, data):
-        return perform_double_symmetric_cryptographic_operation(data, self.padder, self.encryptor)
+        encryptor = self.cipher.encryptor()
+        padder = padding.PKCS7(BLOCKSIZE_IN_BITS).padder()
+        return perform_double_symmetric_cryptographic_operation(data, padder, encryptor)
 
 class PaddingDecryptor:
     def __init__(self, cipher):
-        self.decryptor = cipher.decryptor()
-        self.unpadder = padding.PKCS7(BLOCKSIZE_IN_BITS).unpadder()
+        self.cipher = cipher
 
     def __call__(self, data):
-        return perform_double_symmetric_cryptographic_operation(data, self.decryptor, self.unpadder)
+        decryptor = self.cipher.decryptor()
+        unpadder = padding.PKCS7(BLOCKSIZE_IN_BITS).unpadder()
+        return perform_double_symmetric_cryptographic_operation(data, decryptor, unpadder)
 
 def create_symmetric_key_encryptor_and_decryptor_from_number_and_input_vector(number, input_vector):
     cipher = Cipher(algorithms.AES(number), modes.CBC(input_vector))
