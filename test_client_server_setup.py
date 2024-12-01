@@ -236,18 +236,18 @@ class TestCommunication(unittest.TestCase):
         expected_alice_messages = [SkipItem()]*3 + [create_text_message("Bob has left your game!")] + [SkipItem()]*2
         testcase.assert_received_values_match_log(expected_alice_messages, "Alice")
 
-    def _server_handles_command_when_not_logged_in(self, command_text):
+    def _server_handles_command_when_not_logged_in(self, command):
         testcase = TestCase()
-        testcase.buffer_client_commands("Bob", [command_text, 1])
+        testcase.buffer_client_commands("Bob", [command, 1])
         testcase.run()
         expected_bob_messages = [create_must_login_message()]
         testcase.assert_received_values_match_log(expected_bob_messages, "Bob")
 
     def test_server_handles_joining_when_not_logged_in(self):
-        self._server_handles_command_when_not_logged_in("join Alice")
+        self._server_handles_command_when_not_logged_in(Message(protocol_definitions.JOIN_GAME_PROTOCOL_TYPE_CODE, "Alice"))
 
     def test_server_handles_creating_when_not_logged_in(self):
-        self._server_handles_command_when_not_logged_in("create Alice")
+        self._server_handles_command_when_not_logged_in(Message(protocol_definitions.GAME_CREATION_PROTOCOL_TYPE_CODE, 'Alice'))
 
 if __name__ == '__main__':
     unittest.main()

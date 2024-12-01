@@ -195,6 +195,9 @@ class Client:
         self.username = username
         self.password = password
 
+    def has_attempted_login(self):
+        return self.username is not None
+
     def set_current_opponent(self, value):
         self.current_opponent = value
 
@@ -268,7 +271,7 @@ def splash():
             "       _____  ___   ____\n" +
             "        | |  / / \ | |_\n" +
             "        |_|  \_\_/ |_|__\n")
-    print("Welcome to VCD's Tic-Tac-Toe game!")
+    print("Welcome to Fire Chicken's Tic-Tac-Toe game!")
     print("To play, you will need to create an account and login.\n" +
             "Then, create a game or join someone else's.\n" + 
             "If you create a game, you must join it as well to start playing.\n\n" +

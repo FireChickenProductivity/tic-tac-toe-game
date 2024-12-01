@@ -52,12 +52,16 @@ def make_move(client, value):
 def create_game(client, value):
     if value == "":
         return "To create a game, you must specify the username of your opponent."
+    elif not client.has_attempted_login():
+        return "You must log in before creating a game!"
     else:
         return Message(protocol_definitions.GAME_CREATION_PROTOCOL_TYPE_CODE, value)
 
 def join_game(client, value):
     if value == "":
         return "To join a game, you must specify the username of your opponent."
+    elif not client.has_attempted_login():
+        return "You must log in before joining a game!"
     else:
         client.set_current_opponent(value)
         return Message(protocol_definitions.JOIN_GAME_PROTOCOL_TYPE_CODE, value)

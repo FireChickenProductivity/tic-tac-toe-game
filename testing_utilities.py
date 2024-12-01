@@ -85,6 +85,8 @@ class TestClientHandler:
         for command in self.commands:
             if type(command) == str:
                 self.perform_command(command)
+            elif type(command) == Message:
+                self.send_message(command)
             else:
                 command(self)
     
