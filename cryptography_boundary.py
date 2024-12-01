@@ -5,6 +5,9 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
+
 
 RSA_KEY_SIZE = 4096
 RSA_PUBLIC_EXPONENT = 65537
@@ -56,6 +59,13 @@ def obtain_public_private_key_pair(public_key_name, private_key_name):
         return load_public_private_key_pair(public_key_name, private_key_name)
     return create_public_private_key_pair(public_key_name, private_key_name)
 
+def _create_padding_algorithm():
+    return padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+
 def encrypt_data_using_public_key(data, key):
     return key.encrypt(data, _create_padding_algorithm())
 
@@ -64,20 +74,19 @@ def decrypt_data_using_private_key(data, key):
 
 # Functions for dealing with symmetric key encryption
 
-BLOCK_SIZE = 64
+BLOCK_SIZE = 16
 
-def create_symmetric_key():
-    pass
+def create_symmetric_key_encryptor_and_decryptor_from_number_and_input_vector(number, input_vector):
+    cipher = Cipher(algorithms.AES(number), modes.CBC(input_vector))
+    encryptor = cipher.encryptor()
+    decryptor = cipher.decryptor()
+    return encryptor, decryptor
 
-def _create_padding_algorithm():
-    return padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
+def create_symmetric_key_parameters():
+    number = os.urandom(32)
+    input_vector = os.urandom(16)
+    return number, input_vector
 
-def encrypt_data_using_symmetric_key(data, key):
-    pass
+def perform_symmetric_cryptographic_operation(data, operator):
+    return operator.update(data) + operator.finalize()
 
-def decrypt_data_using_symmetric_key(data, key):
-    pass

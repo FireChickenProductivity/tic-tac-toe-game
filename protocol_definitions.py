@@ -13,6 +13,7 @@ CHAT_MESSAGE_PROTOCOL_TYPE_CODE = type_code_assigner.claim_next_code()
 GAME_CREATION_PROTOCOL_TYPE_CODE = type_code_assigner.claim_next_code()
 GAME_PIECE_PROTOCOL_TYPE_CODE = type_code_assigner.claim_next_code()
 GAME_ENDING_PROTOCOL_TYPE_CODE = type_code_assigner.claim_next_code()
+SYMMETRIC_KEY_TRANSMISSION_PROTOCOL_TYPE_CODE = type_code_assigner.claim_next_code()
 
 #For communicating with the client
 CLIENT_PROTOCOL_MAP = protocol.ProtocolMap([
@@ -30,4 +31,5 @@ SERVER_PROTOCOL_MAP = protocol.ProtocolMap([
     protocol.create_username_message_protocol(GAME_CREATION_PROTOCOL_TYPE_CODE),
     protocol.MessageProtocol(QUIT_GAME_PROTOCOL_TYPE_CODE),
     protocol.create_single_byte_nonnegative_integer_message_protocol(GAME_UPDATE_PROTOCOL_TYPE_CODE),
+    protocol.create_text_message_protocol(SYMMETRIC_KEY_TRANSMISSION_PROTOCOL_TYPE_CODE),
 ])
