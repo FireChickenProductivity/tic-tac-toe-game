@@ -1,5 +1,5 @@
 import selectors
-import time
+from threading import Lock
 
 import protocol
 from protocol import Message
@@ -113,7 +113,8 @@ class MessageReceiver:
         self.block_size = 0
         self.ready_for_second_block = not wait_before_handling_second_block
         self.has_handled_first_block = False
-        self.is_reading = False
+        self.read_lock = Lock()
+        self.data_processing_lock = Lock()
 
     def can_now_handle_second_block(self):
         self.ready_for_second_block = True
@@ -142,20 +143,26 @@ class MessageReceiver:
                 raise PeerDisconnectionException("Peer closed.")
 
     def process_already_received_data(self):
-        self.is_reading = True
-        #This loop is necessary because the selector will only call read when bytes are received, 
-        #so this is needed to handle messages that arrived in the same chunk of bytes
-        while len(self.encrypted_buffer) >= self.block_size and (self.ready_for_second_block or not self.has_handled_first_block):
-            self.process_message()
-            self.has_handled_first_block = True
-        self.is_reading = False
+        is_acquired = self.data_processing_lock.acquire(blocking=False)
+        if is_acquired:
+            #This loop is necessary because the selector will only call read when bytes are received, 
+            #so this is needed to handle messages that arrived in the same chunk of bytes
+            while len(self.encrypted_buffer) >= self.block_size and (self.ready_for_second_block or not self.has_handled_first_block):
+                self.process_message()
+                self.has_handled_first_block = True
+            self.data_processing_lock.release()
 
     def read(self):
         """Processes newly received bytes"""
-        if not self.is_reading:
-            self.is_reading = True
-            self._read()
-            self.process_already_received_data()
+        try:
+            is_acquired = self.read_lock.acquire(blocking=False)
+            if is_acquired:
+                self._read()
+                self.process_already_received_data()
+                self.read_lock.release()
+        except Exception as e:
+            self.read_lock.release()
+            raise e
         
     def process_complete_message(self):
         """Finishes handling a completed message"""
@@ -199,9 +206,6 @@ class MessageReceiver:
 
     def has_unprocessed_data(self):
         return self.encrypted_buffer
-
-    def is_currently_reading(self):
-        return self.is_reading
 
 def compute_sending_and_receiving_protocol_maps(is_server):
     """Properly chooses which protocol map is for receiving and which is for sending based on if this is for the server or client"""
@@ -255,8 +259,7 @@ class ConnectionHandler:
         self.message_receiver.set_decryption_function(decryption_function, cryptography_boundary.BLOCK_SIZE)
         self.message_sender.set_encryption_function(encryption_function, cryptography_boundary.BLOCK_SIZE - 1)
         self.message_receiver.can_now_handle_second_block()
-        if self.message_receiver.has_unprocessed_data() and not self.message_receiver.is_currently_reading():
-            self.message_receiver.process_already_received_data()
+        self.message_receiver.process_already_received_data()
 
     def _set_selector_events_mask(self, mode):
         """Set selector to listen for events."""
