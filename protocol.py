@@ -3,6 +3,9 @@ from protocol_type_codes import *
 from packing_utilities import *
 from protocol_classes import *
 
+USERNAME_LENGTH_FIELD_SIZE_IN_BYTES = 1
+PASSWORD_LENGTH_FIELD_SIZE_IN_BYTES = 1
+
 class Message:
     """Class for keeping track of type the code and message values for a message"""
     def __init__(self, type_code, values=None):
@@ -217,8 +220,8 @@ def create_username_and_password_message_protocol(type_code: int):
     """
         Returns a message protocol for a username and password field
     """
-    user_name_field = create_string_protocol_field(1)
-    password_field = create_string_protocol_field(1)
+    user_name_field = create_string_protocol_field(USERNAME_LENGTH_FIELD_SIZE_IN_BYTES)
+    password_field = create_string_protocol_field(PASSWORD_LENGTH_FIELD_SIZE_IN_BYTES)
     protocol = MessageProtocol(type_code, ((user_name_field, password_field)))
     return protocol
 
@@ -256,7 +259,7 @@ def create_username_and_single_character_message_protocol(type_code: int):
     """
         Returns a message protocol for communicating a username followed by a single character
     """
-    username_field = create_string_protocol_field(1)
+    username_field = create_string_protocol_field(USERNAME_LENGTH_FIELD_SIZE_IN_BYTES)
     single_character_field = create_single_character_string_protocol_field()
     return MessageProtocol(type_code, [username_field, single_character_field])
 

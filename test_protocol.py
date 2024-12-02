@@ -292,8 +292,8 @@ class TestSymmetricKeyMessageProtocol(unittest.TestCase):
         message_protocol = self._create_protocol()
         number = os.urandom(32)
         input_vector = os.urandom(16)
-        packing = message_protocol.pack(input_vector, number)
-        unpacked_input_vector, unpacked_number = unpack_message_values(packing, message_protocol)
+        packing = message_protocol.pack(number, input_vector)
+        unpacked_number, unpacked_input_vector = unpack_message_values(packing, message_protocol)
         self.assertEqual(input_vector, unpacked_input_vector)
         self.assertEqual(number, unpacked_number)
     

@@ -1,6 +1,29 @@
 import game_actions
 import protocol_definitions
-from protocol import Message
+from protocol import Message, USERNAME_LENGTH_FIELD_SIZE_IN_BYTES, PASSWORD_LENGTH_FIELD_SIZE_IN_BYTES
+
+def compute_maximum_length_given_length_field_in_bytes(length_field_size):
+    return 2**(8*length_field_size) - 1
+MAXIMUM_USERNAME_LENGTH = compute_maximum_length_given_length_field_in_bytes(USERNAME_LENGTH_FIELD_SIZE_IN_BYTES)
+MAXIMUM_PASSWORD_LENGTH = compute_maximum_length_given_length_field_in_bytes(PASSWORD_LENGTH_FIELD_SIZE_IN_BYTES)
+
+def _is_valid_text_argument(text, maximum_length):
+    return len(text) > 0 and len(text) <= maximum_length
+
+def is_valid_username(username):
+    return _is_valid_text_argument(username, MAXIMUM_USERNAME_LENGTH)
+
+def is_valid_password(password):
+    return _is_valid_text_argument(password, MAXIMUM_PASSWORD_LENGTH)
+
+def _generate_feedback_text_on_excessively_long_text_argument(argument_name, maximum_length):
+    return f"You provided a {argument_name} that is too long. You should provide a {argument_name} that is at most {maximum_length} characters."
+
+def generate_feedback_text_on_excessively_long_username_input():
+    return _generate_feedback_text_on_excessively_long_text_argument('username', MAXIMUM_USERNAME_LENGTH)
+
+def generate_feedback_text_on_excessively_long_password_input():
+    return _generate_feedback_text_on_excessively_long_text_argument('password', MAXIMUM_PASSWORD_LENGTH)
 
 def _parse_two_space_separated_values(text):
     """Parses text into 2 space separated values. Returns None on failure."""
@@ -91,6 +114,10 @@ def login(client, value):
         result = 'When logging in, you must provide a username, press space, and provide your password!'
     elif client.get_current_game() is not None:
         result = "You cannot log in to an account in the middle of a game!"
+    elif not is_valid_username(values[0]):
+        result = generate_feedback_text_on_excessively_long_username_input()
+    elif not is_valid_password(values[1]):
+        result = generate_feedback_text_on_excessively_long_password_input()
     else:
         client.set_credentials(*values)
         client.login()
