@@ -3,6 +3,7 @@ import selectors
 import protocol
 from protocol import Message
 import protocol_definitions
+import cryptography_boundary
 
 RECEIVING_MESSAGE_LOG_CATEGORY = "receiving"
 SENDING_MESSAGE_LOG_CATEGORY = "sending"
@@ -49,6 +50,12 @@ class MessageSender:
         self.buffer = b""
         self.protocol_map = protocol_map
         self.close_callback = close_callback
+        self.encryption_function = None
+        self.block_size = 0
+
+    def set_encryption_function(self, value, block_size):
+        self.encryption_function = value
+        self.block_size = block_size
     
     def write(self):
         """Writes bytes in the buffer to the connection socket"""
@@ -73,13 +80,14 @@ class MessageSender:
         self.logger.handle_debug_message(MessageEvent(message, self.addr), SENDING_MESSAGE_LOG_CATEGORY)
 
 class MessageReceiver:
-    def __init__(self, logger, connection_information: ConnectionInformation, receiving_protocol_map: protocol.ProtocolMap, close_callback):
+    def __init__(self, logger, connection_information: ConnectionInformation, receiving_protocol_map: protocol.ProtocolMap, close_callback, set_symmetric_encryption_key):
         """
             Converts messages received over a connection into Message objects
             logger: a logger object for logging errors and significant occurrences
             connection_information: information on the connection used to receive bytes
             message_handler: a protocol map for handling received messages
             close_callback: a callback function to use to close the current connection
+            set_symmetric_encryption_key: a callback function to update the current symmetric encryption key
         """
         self.logger = logger
         self.sock = connection_information.sock
@@ -88,6 +96,17 @@ class MessageReceiver:
         self.buffer = b""
         self.messages = []
         self.close_callback = close_callback
+        self.decryption_function = None
+        self.block_size = 0
+        self.set_symmetric_encryption_key = set_symmetric_encryption_key
+        self.ready_for_second_message: bool = False
+
+    def prepare_for_second_message(self):
+        self.ready_for_second_message = True
+
+    def set_decryption_function(self, value, block_size):
+        self.decryption_function = value
+        self.block_size = block_size
 
     def _read(self):
         """Puts data from the socket into the buffer"""
@@ -166,7 +185,7 @@ def compute_sending_and_receiving_protocol_maps(is_server):
 
 class ConnectionHandler:
     #* as an argument is not something you pass in. It just means that the following arguments must be named explicitly when giving them values
-    def __init__(self, selector, connection_information: ConnectionInformation, logger, callback_handler: protocol.ProtocolCallbackHandler, *, is_server: bool=False, on_close_callback=None):
+    def __init__(self, selector, connection_information: ConnectionInformation, logger, callback_handler: protocol.ProtocolCallbackHandler, asymmetric_key, *, is_server: bool=False, on_close_callback=None):
         """
             selector: the selector object that the connection handler is registered with
             connection_information: the information used to exchange information with the peer
@@ -174,6 +193,7 @@ class ConnectionHandler:
             callback_handler: the callback handler is used to respond to request messages
             is_server: must be assigned values explicitly. Determines if this is for a client or server
             on_close_callback: must be assigned values explicitly. Called when the connection is closed using connection_information
+            asymmetric_key: asymmetric key used for key exchange with the peer
         """
         self.selector = selector
         self.connection_information = connection_information
@@ -185,8 +205,24 @@ class ConnectionHandler:
         #Pick the correct protocol maps based on if this is the client or the server
         sending_protocol_map, receiving_protocol_map = compute_sending_and_receiving_protocol_maps(is_server)
         self.receiving_protocol_map = receiving_protocol_map
-        self.message_receiver = MessageReceiver(self.logger, self.connection_information, receiving_protocol_map, self.close)
+        self.message_receiver = MessageReceiver(self.logger, self.connection_information, receiving_protocol_map, self.close, self.set_symmetric_key)
         self.message_sender = MessageSender(self.logger, self.connection_information, sending_protocol_map, self.close)
+
+        if self.is_server:
+            self.message_receiver.set_decryption_function(lambda x: cryptography_boundary.decrypt_data_using_private_key(x, asymmetric_key), cryptography_boundary.RSA_BLOCK_SIZE)
+        else:
+            self.message_sender.set_encryption_function(lambda x: cryptography_boundary.encrypt_data_using_public_key(x, asymmetric_key), cryptography_boundary.RSA_BLOCK_SIZE)
+            self._create_symmetric_key()
+
+    def _create_symmetric_key(self):
+        parameters = cryptography_boundary.create_symmetric_key_parameters()
+        self.send_message(Message(protocol_definitions.SYMMETRIC_KEY_TRANSMISSION_PROTOCOL_TYPE_CODE), parameters)
+        self.set_symmetric_key(parameters)
+
+    def set_symmetric_key(self, parameters):
+        encryption_function, decryption_function = cryptography_boundary.create_symmetric_key_encryptor_and_decryptor_from_number_and_input_vector(*parameters)
+        self.message_receiver.set_decryption_function(decryption_function, cryptography_boundary.BLOCK_SIZE)
+        self.message_sender.set_encryption_function(encryption_function, cryptography_boundary.BLOCK_SIZE)
 
     def _set_selector_events_mask(self, mode):
         """Set selector to listen for events."""
