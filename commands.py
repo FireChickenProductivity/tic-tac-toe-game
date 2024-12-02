@@ -77,14 +77,18 @@ def create_game(client, value):
         return "To create a game, you must specify the username of your opponent."
     elif not client.has_attempted_login():
         return "You must log in before creating a game!"
+    elif not is_valid_username(value):
+        return generate_feedback_text_on_excessively_long_username_input()
     else:
         return Message(protocol_definitions.GAME_CREATION_PROTOCOL_TYPE_CODE, value)
 
 def join_game(client, value):
     if value == "":
-        return "To join a game, you must specify the username of your opponent."
+        return "To join a game, you must specify the username of the person you are playing against."
     elif not client.has_attempted_login():
         return "You must log in before joining a game!"
+    elif not is_valid_username(value):
+        return generate_feedback_text_on_excessively_long_username_input()
     else:
         client.set_current_opponent(value)
         return Message(protocol_definitions.JOIN_GAME_PROTOCOL_TYPE_CODE, value)
@@ -103,6 +107,10 @@ def register_account(client, value):
         result ='When creating an account, you must provide a username, press space, and provide your password!'
     elif client.get_current_game() is not None:
         result = "You cannot register an account in the middle of a game!"
+    elif not is_valid_username(values[0]):
+        result = generate_feedback_text_on_excessively_long_username_input()
+    elif not is_valid_password(values[1]):
+        result = generate_feedback_text_on_excessively_long_password_input()
     else:
         result = Message(protocol_definitions.ACCOUNT_CREATION_PROTOCOL_TYPE_CODE, values)
     return result
