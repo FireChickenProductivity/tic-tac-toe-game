@@ -176,6 +176,7 @@ class Client:
     def reconnect(self):
         """Attempts to reconnect to the server"""
         self.close(should_reconnect=True)
+        self.reset_game_state()
         done = False
         while not done:
             try:

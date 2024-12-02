@@ -1,4 +1,5 @@
 import selectors
+import time
 
 import protocol
 from protocol import Message
@@ -91,13 +92,14 @@ class MessageSender:
         self.logger.handle_debug_message(MessageEvent(message, self.addr), SENDING_MESSAGE_LOG_CATEGORY)
 
 class MessageReceiver:
-    def __init__(self, logger, connection_information: ConnectionInformation, receiving_protocol_map: protocol.ProtocolMap, close_callback):
+    def __init__(self, logger, connection_information: ConnectionInformation, receiving_protocol_map: protocol.ProtocolMap, close_callback, wait_before_handling_second_block=False):
         """
             Converts messages received over a connection into Message objects
             logger: a logger object for logging errors and significant occurrences
             connection_information: information on the connection used to receive bytes
             message_handler: a protocol map for handling received messages
             close_callback: a callback function to use to close the current connection
+            wait_before_handling_second_block: does not let the receiver process the second block until it is told it is ready. This is usually set when the first block contains cryptographic information that must be processed before handling later blocks
         """
         self.logger = logger
         self.sock = connection_information.sock
@@ -109,6 +111,12 @@ class MessageReceiver:
         self.close_callback = close_callback
         self.decryption_function = None
         self.block_size = 0
+        self.ready_for_second_block = not wait_before_handling_second_block
+        self.has_handled_first_block = False
+        self.is_reading = False
+
+    def can_now_handle_second_block(self):
+        self.ready_for_second_block = True
 
     def set_decryption_function(self, value, block_size):
         self.decryption_function = value
@@ -132,15 +140,23 @@ class MessageReceiver:
                 self.encrypted_buffer += data
             else:
                 raise PeerDisconnectionException("Peer closed.")
-    
-    def read(self):
-        """Processes newly received bytes"""
-        self._read()
+
+    def process_already_received_data(self):
+        self.is_reading = True
         #This loop is necessary because the selector will only call read when bytes are received, 
         #so this is needed to handle messages that arrived in the same chunk of bytes
-        while len(self.encrypted_buffer) >= self.block_size:
+        while len(self.encrypted_buffer) >= self.block_size and (self.ready_for_second_block or not self.has_handled_first_block):
             self.process_message()
-    
+            self.has_handled_first_block = True
+        self.is_reading = False
+
+    def read(self):
+        """Processes newly received bytes"""
+        if not self.is_reading:
+            self.is_reading = True
+            self._read()
+            self.process_already_received_data()
+        
     def process_complete_message(self):
         """Finishes handling a completed message"""
         #Extract the information from the message handler
@@ -181,6 +197,12 @@ class MessageReceiver:
         message = self.messages.pop(0)
         return message
 
+    def has_unprocessed_data(self):
+        return self.encrypted_buffer
+
+    def is_currently_reading(self):
+        return self.is_reading
+
 def compute_sending_and_receiving_protocol_maps(is_server):
     """Properly chooses which protocol map is for receiving and which is for sending based on if this is for the server or client"""
     if is_server:
@@ -214,7 +236,7 @@ class ConnectionHandler:
         #Pick the correct protocol maps based on if this is the client or the server
         sending_protocol_map, receiving_protocol_map = compute_sending_and_receiving_protocol_maps(is_server)
         self.receiving_protocol_map = receiving_protocol_map
-        self.message_receiver = MessageReceiver(self.logger, self.connection_information, receiving_protocol_map, self.close)
+        self.message_receiver = MessageReceiver(self.logger, self.connection_information, receiving_protocol_map, self.close, wait_before_handling_second_block=self.is_server)
         self.message_sender = MessageSender(self.logger, self.connection_information, sending_protocol_map, self.close)
 
         if self.is_server:
@@ -232,6 +254,9 @@ class ConnectionHandler:
         encryption_function, decryption_function = cryptography_boundary.create_symmetric_key_encryptor_and_decryptor_from_number_and_input_vector(*parameters)
         self.message_receiver.set_decryption_function(decryption_function, cryptography_boundary.BLOCK_SIZE)
         self.message_sender.set_encryption_function(encryption_function, cryptography_boundary.BLOCK_SIZE - 1)
+        self.message_receiver.can_now_handle_second_block()
+        if self.message_receiver.has_unprocessed_data() and not self.message_receiver.is_currently_reading():
+            self.message_receiver.process_already_received_data()
 
     def _set_selector_events_mask(self, mode):
         """Set selector to listen for events."""
