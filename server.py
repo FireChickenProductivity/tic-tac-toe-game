@@ -17,6 +17,7 @@ from game_manager import GameHandler, Game
 from connection_table import ConnectionTable, ConnectionTableEntry
 from database_management import Account, create_database_at_path, retrieve_account_with_name_from_database_at_path, insert_account_into_database_at_path
 import sqlite3 #Imported for database exceptions only
+import cryptography_boundary
 
 MUST_LOG_IN_TEXT = "You must login before using that command!"
 
@@ -57,6 +58,8 @@ class Server:
         self.connection_table = ConnectionTable(self.usernames_to_connections)
         self.game_handler = GameHandler()
         listening_socket = self.create_socket_from_address((host, port))
+        #Define asymmetric encryption keys
+        _, self.private_key = cryptography_boundary.obtain_public_private_key_pair("public_rsa.pem", "private_rsa.pem")
         self.selector.register(listening_socket, selectors.EVENT_READ, data=None)
         self._create_protocol_callback_handler()
         self.should_close = False
@@ -206,6 +209,7 @@ class Server:
             connection_information,
             self.logger,
             self.protocol_callback_handler, 
+            self.private_key,
             is_server = True,
             on_close_callback=self.cleanup_connection
         )

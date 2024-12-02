@@ -1,4 +1,5 @@
 import unittest
+import os
 import protocol
 import struct
 
@@ -282,6 +283,20 @@ class TestSingleCharacterStringMessageProtocol(unittest.TestCase):
         self.assertEqual(unpacked, input_text)
         type_code = protocol.unpack_type_code_from_message(input_bytes)
         self.assertEqual(type_code, 2)
+
+class TestSymmetricKeyMessageProtocol(unittest.TestCase):
+    def _create_protocol(self):
+        return protocol.create_symmetric_key_message_protocol(0)
+
+    def test_returns_original_values(self):
+        message_protocol = self._create_protocol()
+        number = os.urandom(32)
+        input_vector = os.urandom(16)
+        packing = message_protocol.pack(input_vector, number)
+        unpacked_input_vector, unpacked_number = unpack_message_values(packing, message_protocol)
+        self.assertEqual(input_vector, unpacked_input_vector)
+        self.assertEqual(number, unpacked_number)
+    
 
 if __name__ == '__main__':
     unittest.main()
