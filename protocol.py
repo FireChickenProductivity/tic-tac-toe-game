@@ -1,7 +1,7 @@
 from protocol_fields import *
 from protocol_type_codes import *
 from packing_utilities import *
-from protocol_classes import *
+from message_protocol import *
 
 USERNAME_LENGTH_FIELD_SIZE_IN_BYTES = 1
 PASSWORD_LENGTH_FIELD_SIZE_IN_BYTES = 1

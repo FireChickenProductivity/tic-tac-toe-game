@@ -1,5 +1,9 @@
+#Defines fields for message protocols. Fields contain information used to pack and unpack them
+
 import struct
 from packing_utilities import decode_value
+
+#Definitions of protocol field classes
 
 class ProtocolField:
     """
@@ -77,6 +81,8 @@ class VariableLengthProtocolField(ProtocolField):
     
     def is_fixed_length(self):
         return False
+
+#Functions for creating protocol fields with specific properties
 
 def create_string_protocol_field(max_size_in_bytes):
     """

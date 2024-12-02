@@ -1,3 +1,5 @@
+#Provides a class for defining a message protocol
+
 from packing_utilities import *
 from protocol_type_codes import *
 from protocol_fields import ProtocolField

@@ -1,7 +1,10 @@
+#Provide functionality for the server to manage games and associate them with the appropriate players
+
 import game_utilities
 
 class Game:
     def __init__(self, creator_username, invited_username):
+        """Used to manage a single game"""
         self.creator_username = creator_username
         self.invited_username = invited_username
         self.players = [creator_username, invited_username]
@@ -54,6 +57,7 @@ class Game:
         return self.creator_username
 
 class GameHandler:
+    """Used to associate games with the corresponding players"""
     def __init__(self):
         self.games = {}
 
@@ -67,13 +71,14 @@ class GameHandler:
             return game_id
         return False
 
-    def get_game(self, creator_username, invited_username):
-        game_id = self.sorted_game_id(creator_username, invited_username)
+    def get_game(self, username1, username2):
+        game_id = self.sorted_game_id(username1, username2)
         return self.games.get(game_id)
 
-    def game_exists(self, creator_username, invited_username):
-        game_id = self.sorted_game_id(creator_username, invited_username)
+    def game_exists(self, username1, username2):
+        game_id = self.sorted_game_id(username1, username2)
         return game_id in self.games
     
-    def sorted_game_id(self, creator_username, invited_username):
-        return ' '.join(sorted([creator_username, invited_username]))
+    def sorted_game_id(self, username1, username2):
+        """Make sure the game is accessible using a single string regardless of which player is the first in the calculation by using the result of sorting the usernames"""
+        return ' '.join(sorted([username1, username2]))

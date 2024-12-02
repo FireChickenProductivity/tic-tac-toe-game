@@ -1,3 +1,5 @@
+#Utility functions for packing and unpacking bytes
+
 def compute_format_representation_for_size(size: int):
     """
         Computes the appropriate format string representation for the size of a field
