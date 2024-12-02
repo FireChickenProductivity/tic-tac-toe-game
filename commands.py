@@ -79,6 +79,8 @@ def create_game(client, value):
         return "You must log in before creating a game!"
     elif not is_valid_username(value):
         return generate_feedback_text_on_excessively_long_username_input()
+    elif client.get_username() == value:
+        return "You cannot challenge yourself to a game!"
     else:
         return Message(protocol_definitions.GAME_CREATION_PROTOCOL_TYPE_CODE, value)
 
@@ -89,6 +91,8 @@ def join_game(client, value):
         return "You must log in before joining a game!"
     elif not is_valid_username(value):
         return generate_feedback_text_on_excessively_long_username_input()
+    elif client.get_username() == value:
+        return "You cannot play a game against yourself."
     else:
         client.set_current_opponent(value)
         return Message(protocol_definitions.JOIN_GAME_PROTOCOL_TYPE_CODE, value)

@@ -214,6 +214,9 @@ class Client:
     def get_current_opponent(self):
         return self.current_opponent
 
+    def get_username(self):
+        return self.username
+
     def get_current_game(self):
         return self.current_game
 
