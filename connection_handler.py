@@ -138,7 +138,7 @@ class MessageReceiver:
         self._read()
         #This loop is necessary because the selector will only call read when bytes are received, 
         #so this is needed to handle messages that arrived in the same chunk of bytes
-        while len(self.encrypted_buffer) > self.block_size:
+        while len(self.encrypted_buffer) >= self.block_size:
             self.process_message()
     
     def process_complete_message(self):
@@ -231,7 +231,7 @@ class ConnectionHandler:
     def set_symmetric_key(self, parameters):
         encryption_function, decryption_function = cryptography_boundary.create_symmetric_key_encryptor_and_decryptor_from_number_and_input_vector(*parameters)
         self.message_receiver.set_decryption_function(decryption_function, cryptography_boundary.BLOCK_SIZE)
-        self.message_sender.set_encryption_function(encryption_function, cryptography_boundary.BLOCK_SIZE)
+        self.message_sender.set_encryption_function(encryption_function, cryptography_boundary.BLOCK_SIZE - 1)
 
     def _set_selector_events_mask(self, mode):
         """Set selector to listen for events."""
@@ -253,7 +253,7 @@ class ConnectionHandler:
         if self.callback_handler.has_protocol(request.type_code):
             self.respond_to_request(request)
         elif request.type_code == protocol_definitions.SYMMETRIC_KEY_TRANSMISSION_PROTOCOL_TYPE_CODE:
-            self.set_symmetric_key(*request.values)
+            self.set_symmetric_key(request.values)
         else:   
             print("Unidentified protocol received", request.type_code, f"values: {request.values}")
         

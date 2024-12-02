@@ -16,7 +16,7 @@ class TestEncryption(unittest.TestCase):
     def test_symmetric_encryption(self):
         parameters = create_symmetric_key_parameters()
         encryption_function, decryption_function = create_symmetric_key_encryptor_and_decryptor_from_number_and_input_vector(*parameters)
-        initial_data = b"Another message"
+        initial_data = b"'A'M3@ 6+$jQvLU"
         encrypted = encryption_function(initial_data)
         print(len(encrypted))
         decrypted = decryption_function(encrypted)
