@@ -1,3 +1,5 @@
+#This file provides code for managing communications between peers
+
 import selectors
 from threading import Lock
 
@@ -5,6 +7,8 @@ import protocol
 from protocol import Message
 import protocol_definitions
 import cryptography_boundary
+
+#Utility constants, functions, and classes
 
 RECEIVING_MESSAGE_LOG_CATEGORY = "receiving"
 SENDING_MESSAGE_LOG_CATEGORY = "sending"
@@ -27,6 +31,7 @@ class MessageEvent:
             self.message == other.message
 
 class PeerDisconnectionException(Exception):
+    """Exception used when a peer closes its connection"""
     pass
 
 class ConnectionInformation:
@@ -38,6 +43,7 @@ class ConnectionInformation:
         self.text_representation = f"{ip_address}:{port}"
 
 def convert_every_n_bytes(conversion_function, n, input_bytes):
+    """Manipulates every n bytes. This is used for encryption."""
     i = 0
     result = b""
     while i < len(input_bytes):
@@ -46,6 +52,16 @@ def convert_every_n_bytes(conversion_function, n, input_bytes):
         result += converted_bytes
         i += n
     return result
+
+def compute_sending_and_receiving_protocol_maps(is_server):
+    """Properly chooses which protocol map is for receiving and which is for sending based on if this is for the server or client"""
+    if is_server:
+        sending_protocol_map = protocol_definitions.CLIENT_PROTOCOL_MAP
+        receiving_protocol_map = protocol_definitions.SERVER_PROTOCOL_MAP
+    else:
+        sending_protocol_map = protocol_definitions.SERVER_PROTOCOL_MAP
+        receiving_protocol_map = protocol_definitions.CLIENT_PROTOCOL_MAP
+    return sending_protocol_map, receiving_protocol_map
 
 class MessageSender:
     def __init__(self, logger, connection_information: ConnectionInformation, protocol_map, close_callback):
@@ -85,7 +101,7 @@ class MessageSender:
                 self.buffer = self.buffer[sent:]
 
     def send_message(self, message: Message):
-        """Starts transmitting the message with specified type code and values to the connection peer"""
+        """Prepares for transmitting the messag to the connection peer. The selector object managing the associated socket performs the write calls."""
         message_bytes = self.protocol_map.pack_values_given_type_code(message.type_code, *message.values)
         encrypted_bytes = convert_every_n_bytes(self.encryption_function, self.block_size, message_bytes)
         self.buffer += encrypted_bytes
@@ -147,6 +163,7 @@ class MessageReceiver:
         if is_acquired:
             #This loop is necessary because the selector will only call read when bytes are received, 
             #so this is needed to handle messages that arrived in the same chunk of bytes
+            #To prevent the server from using the asymmetric key to decrypt and hence consume bytes after the first message containing the symmetric key, the loop stops continuing after the first block until the message receiver gets the ok to consume more blocks
             while len(self.encrypted_buffer) >= self.block_size and (self.ready_for_second_block or not self.has_handled_first_block):
                 self.process_message()
                 self.has_handled_first_block = True
@@ -207,21 +224,11 @@ class MessageReceiver:
     def has_unprocessed_data(self):
         return self.encrypted_buffer
 
-def compute_sending_and_receiving_protocol_maps(is_server):
-    """Properly chooses which protocol map is for receiving and which is for sending based on if this is for the server or client"""
-    if is_server:
-        sending_protocol_map = protocol_definitions.CLIENT_PROTOCOL_MAP
-        receiving_protocol_map = protocol_definitions.SERVER_PROTOCOL_MAP
-    else:
-        sending_protocol_map = protocol_definitions.SERVER_PROTOCOL_MAP
-        receiving_protocol_map = protocol_definitions.CLIENT_PROTOCOL_MAP
-    return sending_protocol_map, receiving_protocol_map
-    
-
 class ConnectionHandler:
     #* as an argument is not something you pass in. It just means that the following arguments must be named explicitly when giving them values
     def __init__(self, selector, connection_information: ConnectionInformation, logger, callback_handler: protocol.ProtocolCallbackHandler, asymmetric_key, *, is_server: bool=False, on_close_callback=None):
         """
+            This is the object used by the rest the program for managing connections. It uses a message receiver and sender. 
             selector: the selector object that the connection handler is registered with
             connection_information: the information used to exchange information with the peer
             logger: a logger for logging noteworthy events and errors
@@ -243,6 +250,7 @@ class ConnectionHandler:
         self.message_receiver = MessageReceiver(self.logger, self.connection_information, receiving_protocol_map, self.close, wait_before_handling_second_block=self.is_server)
         self.message_sender = MessageSender(self.logger, self.connection_information, sending_protocol_map, self.close)
 
+        #Properly decide what to do with the asymmetric key for communicating with the peer based on if this is the client or the server. The server uses it for the first decryption while the client uses it for the first encryption. 
         if self.is_server:
             self.message_receiver.set_decryption_function(lambda x: cryptography_boundary.decrypt_data_using_private_key(x, asymmetric_key), cryptography_boundary.RSA_BLOCK_SIZE)
         else:
@@ -250,6 +258,7 @@ class ConnectionHandler:
             self._create_symmetric_key()
 
     def _create_symmetric_key(self):
+        """Create symmetric key and share it with the peer"""
         parameters = cryptography_boundary.create_symmetric_key_parameters()
         self.send_message(Message(protocol_definitions.SYMMETRIC_KEY_TRANSMISSION_PROTOCOL_TYPE_CODE, parameters))
         self.set_symmetric_key(parameters)
@@ -257,7 +266,9 @@ class ConnectionHandler:
     def set_symmetric_key(self, parameters):
         encryption_function, decryption_function = cryptography_boundary.create_symmetric_key_encryptor_and_decryptor_from_number_and_input_vector(*parameters)
         self.message_receiver.set_decryption_function(decryption_function, cryptography_boundary.SYMMETRIC_BLOCK_SIZE)
+        #As a quick fix, the blocksize - 1 is used because encrypting a full message with no padding causes an exception if you try to remove padding from it. This guarantees that every message is encrypted with at least one byte of padding. A better fix should be implemented later if time permits. 
         self.message_sender.set_encryption_function(encryption_function, cryptography_boundary.SYMMETRIC_BLOCK_SIZE - 1)
+        #Setting up the symmetric key means that the message receiver can now handle more blocks
         self.message_receiver.can_now_handle_second_block()
         self.message_receiver.process_already_received_data()
 

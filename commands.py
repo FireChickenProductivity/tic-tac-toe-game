@@ -1,6 +1,10 @@
+#This file defines commands for playing the game on the client
+
 import game_actions
 import protocol_definitions
 from protocol import Message, USERNAME_LENGTH_FIELD_SIZE_IN_BYTES, PASSWORD_LENGTH_FIELD_SIZE_IN_BYTES
+
+#Define helper functions and constants
 
 def compute_maximum_length_given_length_field_in_bytes(length_field_size):
     return 2**(8*length_field_size) - 1
@@ -32,8 +36,11 @@ def _parse_two_space_separated_values(text):
         return None
     return values
 
+#Commands are defined using a Command object that helps associate information like the command name and help message with an action to be performed when the command is executed. Command action functions return a string to give output back to the user and return a Message object to send a request to the server.
+
 class Command:
     def __init__(self, client, name: str, help_message: str, action):
+        """The command class represents a command that can be run on the specified client using the specified name to perform the specified action."""
         self.client = client
         self.name = name
         self.help_message = help_message
@@ -54,6 +61,8 @@ class Command:
     
     def get_help_message(self):
         return self.help_message
+
+#Command function definitions
 
 def make_move(client, value):
     game = client.get_current_game()
@@ -138,6 +147,8 @@ def login(client, value):
 def output_help_message(client, value):
     client.handle_help_command(value)
 
+#Command manager data structure to let the Client class keep track of and easily perform commands
+
 class CommandManager:
     def __init__(self, commands):
         self.commands = commands
@@ -159,6 +170,7 @@ class CommandManager:
     def get_command_help_message(self, name):
         return self.commands[name].get_help_message()
 
+#Function for defining the command manager for a given client
 
 def create_commands(client):
     def create_command_for_client(name, help_message, action):

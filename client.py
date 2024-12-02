@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+#This file contains the code for the client functionality. The Client is implemented as a class to aid with automated testing. Command functionality can be found inside the commands class.
+
 import sys
 import socket
 import time
@@ -16,6 +18,8 @@ import protocol
 import game_actions
 from commands import create_commands, CommandManager
 import cryptography_boundary
+
+#Utility function utilized by Client class
 
 def create_socket_from_address(target_address):
     """Creates a client socket that connects to the specified address"""
@@ -68,6 +72,7 @@ class Client:
             exit()
 
     def handle_help_command(self, label):
+        """Display an appropriate help message in response to the help command. The label determines the help topic."""
         if self.commands.has_command(label):
             text = self.commands.get_command_help_message(label)
         else:
@@ -77,6 +82,7 @@ class Client:
         self.output_text("Help: " + text)
 
     def handle_game_ending(self, opponent_username, outcome):
+        """Handle game ending message from the server."""
         outcome_text = 'tie'
         if outcome == game_actions.LOSS:
             outcome_text = 'loss'
@@ -91,6 +97,9 @@ class Client:
         """Updates the game state"""
         self.output_text("The game board is now:")
         self.current_game = game_text
+
+        #Convert the game text with locations solely represented by index into a nice
+        #2 dimensional format with rows and columns and dashes in between the pieces.
         gamerow_1 = [' ',' ',' ','|',' ',' ',' ','|',' ',' ',' ']
         gamerow_2 = [' ',' ',' ','|',' ',' ',' ','|',' ',' ',' ']
         gamerow_3 = [' ',' ',' ','|',' ',' ',' ','|',' ',' ',' ']
@@ -119,6 +128,7 @@ class Client:
         srow_1 = "".join(gamerow_1)
         srow_2 = "".join(gamerow_2)
         srow_3 = "".join(gamerow_3)
+
         self.information_text = f"{self.username} ({self.current_piece}) vs {self.current_opponent} ({game_actions.compute_other_piece(self.current_piece)})"
         if not game_actions.check_winner(self.current_game):
             self.information_text += f"\n{game_actions.compute_current_player(self.current_game)}'s turn."
@@ -180,6 +190,7 @@ class Client:
             self.reconnection_timeout += 1
 
     def login(self):
+        """Log into the server using the stored credentials."""
         credentials = (self.username, self.password)
         self.send_message(protocol.Message(protocol_definitions.SIGN_IN_PROTOCOL_TYPE_CODE, credentials))
 
@@ -188,16 +199,23 @@ class Client:
         self.close(should_reconnect=True)
         self.reset_game_board()
         done = False
+        #Keep attempting to log back in until the client closes or connecting does not throw an PeerDisconnectionException
         while not done and not self.is_closed:
             try:
+                #Try to reconnect
                 print("Trying to reconnect...")
                 self._create_connection_handler()
+
+                #Try to resume the session by logging back in with stored credentials if present and then rejoin the previous game if the user was in one
                 if self.has_attempted_login():
                     self.login()
                     if self.current_opponent is not None:
                         self.perform_command_from_text_input('join ' + self.current_opponent)
+
+                #Connection was successful if the code gets this far without throwing a PeerDisconnectionException
                 done = True
             except connection_handler.PeerDisconnectionException:
+                #Reconnecting unsuccessful, so pause and then keep looping
                 done = False
                 self.pause_in_between_reconnection_attempts()
 
@@ -261,6 +279,7 @@ class Client:
                         if mask & selectors.EVENT_READ:
                             self.has_received_successful_message = True
                     except connection_handler.PeerDisconnectionException:
+                        #Reconnect if reconnection is enabled. It is currently only ever disabled for some automated testing purposes.
                         if self.should_reconnect:
                             print("Connection failure detected. Attempting reconnection...")
                             self.pause_in_between_reconnection_attempts()
@@ -311,10 +330,12 @@ def splash():
 
 def main():
     """The entry point for the client program"""
+    #Create helper objects
     sel = selectors.DefaultSelector()
     os.makedirs("logs", exist_ok=True)
     client_logger = logging_utilities.FileLogger(os.path.join("logs", "client.log"), debugging_mode = False)
 
+    #Parse command line arguments
     parser = argparse.ArgumentParser(prog='client.py', description='The client program for playing tictactoe.', usage=f"usage: {sys.argv[0]} -i <host> -p <port>")
     parser.add_argument("-i")
     parser.add_argument("-p", type=int)
@@ -326,13 +347,14 @@ def main():
 
     host, port = arguments.i, arguments.p
 
-    connection = Client(host, port, sel, client_logger)
+    #Create client object and start the game
+    client = Client(host, port, sel, client_logger)
     splash()
     #Run the client input loop in a separate thread
-    client_input_thread = Thread(target=perform_user_commands_through_connection, args=(connection,))
+    client_input_thread = Thread(target=perform_user_commands_through_connection, args=(client,))
     client_input_thread.start()
 
-    connection.run_selector_loop()
+    client.run_selector_loop()
 
 if __name__ == '__main__':
     main()
