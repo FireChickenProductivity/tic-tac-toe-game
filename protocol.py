@@ -1,14 +1,19 @@
+#Provides code for dealing with protocols
+
 from protocol_fields import *
 from protocol_type_codes import *
 from packing_utilities import *
 from message_protocol import *
 
+#Constants
 USERNAME_LENGTH_FIELD_SIZE_IN_BYTES = 1
 PASSWORD_LENGTH_FIELD_SIZE_IN_BYTES = 1
 
+#Classes for dealing with protocols
+
 class Message:
-    """Class for keeping track of type the code and message values for a message"""
     def __init__(self, type_code, values=None):
+        """Class for keeping track of type the code and message values for a message. Values can be omitted, a list, a tuple, or a single value"""
         self.type_code = type_code
         self.values = values
         if values is None:
@@ -90,13 +95,19 @@ class MessageHandler:
         self.is_done = True
 
     def _update_next_expected_size(self):
+        """
+            Store the next expected field size if the field is fixed length.
+            Otherwise, set the next expected size to None since the next field size needs to be parsed still.
+        """
         if self.protocol.is_field_fixed_length(self.field_index):
             self.next_expected_size = self.protocol.compute_fixed_length_field_length(self.field_index)
         else:
             self.next_expected_size = None
 
     def _advance_field(self):
+        """Starts parsing the next field"""
         if self.field_index >= 0 and self.field_index < self.protocol.get_number_of_fields():
+            #Unpack the current field considering if it is fixed length
             if self.protocol.is_field_fixed_length(self.field_index):
                 value = self.protocol.unpack_fixed_length_field(
                     self.field_index,
@@ -121,9 +132,13 @@ class MessageHandler:
             self._update_values_based_on_message_protocol_with_fields()
 
     def _update_values_based_on_message_protocol_with_fields(self):
+        """Perform the next step of parsing the message"""
+        #If no processing has been done yet, advance field to get information on the first field
         if self.field_index < 0:
             self._advance_field()
         number_of_new_bytes = len(self.bytes) - self.bytes_index
+        #If the expected size of the next field has been identified, advance the field to the next one
+        #Otherwise, compute the next size
         if self.next_expected_size:
             if number_of_new_bytes >= self.next_expected_size:
                 self._advance_field()
@@ -199,6 +214,8 @@ class ProtocolCallbackHandler:
             protocol_type_code: the type code for the corresponding protocol
         """
         return protocol_type_code in self.callbacks
+
+#Functions for defining protocols
 
 def create_text_message_protocol(type_code: int):
     """
