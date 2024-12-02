@@ -134,7 +134,9 @@ class Server:
     def handle_game_join(self, other_player_username, connection_information):
         joiner_state = self.connection_table.get_entry_state(connection_information)
         joiner_username = joiner_state.username
-        if self._validate_user_logged_in(joiner_state, connection_information) and self.game_handler.game_exists(joiner_username, other_player_username):
+        if self._validate_user_logged_in(joiner_state, connection_information):
+            if not self.game_handler.game_exists(joiner_username, other_player_username):
+                self.handle_game_creation(other_player_username, connection_information)
             game = self.game_handler.get_game(joiner_username, other_player_username)
             if joiner_state.current_game is not None:
                 self.handle_game_quit(connection_information)
