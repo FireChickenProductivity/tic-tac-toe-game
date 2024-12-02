@@ -1,6 +1,6 @@
 #This file defines commands for playing the game on the client
 
-import game_actions
+import game_utilities
 import protocol_definitions
 from protocol import Message, USERNAME_LENGTH_FIELD_SIZE_IN_BYTES, PASSWORD_LENGTH_FIELD_SIZE_IN_BYTES
 
@@ -68,11 +68,11 @@ def make_move(client, value):
     game = client.get_current_game()
     if not game:
         result = "You cannot make a move because you are not in a game."
-    elif not game_actions.is_valid_move_text(value):
+    elif not game_utilities.is_valid_move_text(value):
         result = "You must provide a valid move. Use the row followed by the column, such as 'move a1'."
     else:
-        move_number = game_actions.convert_move_text_to_move_number(value)
-        current_piece = game_actions.compute_current_player(game)
+        move_number = game_utilities.convert_move_text_to_move_number(value)
+        current_piece = game_utilities.compute_current_player(game)
         if game[move_number - 1] != ' ':
             result = "You cannot move there because that spot is already taken."
         elif current_piece == client.get_current_piece():

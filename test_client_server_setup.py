@@ -1,6 +1,6 @@
 import protocol_definitions
 from protocol import Message
-import game_actions
+import game_utilities
 import unittest
 from testing_utilities import *
 from server import MUST_LOG_IN_TEXT
@@ -22,13 +22,13 @@ def create_result_message(username, result):
     return Message(protocol_definitions.GAME_ENDING_PROTOCOL_TYPE_CODE, [username, result])
 
 def create_victory_message(username):
-    return create_result_message(username, game_actions.VICTORY)
+    return create_result_message(username, game_utilities.VICTORY)
 
 def create_tie_message(username):
-    return create_result_message(username, game_actions.TIE)
+    return create_result_message(username, game_utilities.TIE)
 
 def create_loss_message(username):
-    return create_result_message(username, game_actions.LOSS)
+    return create_result_message(username, game_utilities.LOSS)
 
 EMPTY_GAME_BOARD = [" "*9]
 EMPTY_GAME_BOARD_MESSAGE = create_game_update_message(EMPTY_GAME_BOARD)
@@ -204,13 +204,13 @@ class TestCommunication(unittest.TestCase):
         testcase.assert_received_values_match_log(expected_alice_messages, "Alice")
 
     def test_gameplay(self):
-        self.perform_gameplay_test("XOOX  X  ", game_actions.VICTORY, game_actions.LOSS)
+        self.perform_gameplay_test("XOOX  X  ", game_utilities.VICTORY, game_utilities.LOSS)
     
     def test_tie(self):
-        self.perform_gameplay_test("XOXOOXXXO", game_actions.TIE, game_actions.TIE)
+        self.perform_gameplay_test("XOXOOXXXO", game_utilities.TIE, game_utilities.TIE)
 
     def test_first_player_loss(self):
-        self.perform_gameplay_test("OXXXO   O", game_actions.LOSS, game_actions.VICTORY)
+        self.perform_gameplay_test("OXXXO   O", game_utilities.LOSS, game_utilities.VICTORY)
 
     def test_absent_player_does_not_receive_moves(self):
         testcase = TestCase(should_perform_automatic_login=True)

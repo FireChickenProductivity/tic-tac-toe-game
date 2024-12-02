@@ -7,16 +7,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import asymmetric
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives import padding
-
-# Convenience functions
-
-def _read_bytes_at_path(path):
-    with open(path, "rb") as file:
-        return file.read()
-
-def _write_bytes_at_path(data, path):
-    with open(path, "wb") as file:
-        file.write(data)
+from file_utilities import read_bytes_at_path, write_bytes_at_path
 
 # Code for dealing with asymmetric encryption
 
@@ -28,22 +19,22 @@ RSA_PUBLIC_KEY_PATH = "public_rsa.pem"
 RSA_PRIVATE_KEY_PATH = "private_rsa.pem"
 
 def load_private_key(name):
-    key_bytes = _read_bytes_at_path(name)
+    key_bytes = read_bytes_at_path(name)
     key = serialization.load_pem_private_key(key_bytes, password=None)
     return key
 
 def load_public_key(name=RSA_PUBLIC_KEY_PATH):
-    key_bytes = _read_bytes_at_path(name)
+    key_bytes = read_bytes_at_path(name)
     key = serialization.load_pem_public_key(key_bytes)
     return key
 
 def store_public_key_at_path(key, path):
     representation = key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo)
-    _write_bytes_at_path(representation, path)
+    write_bytes_at_path(representation, path)
 
 def store_private_key_at_path(key, path):
     representation = key.private_bytes(encoding=serialization.Encoding.PEM, format=serialization.PrivateFormat.TraditionalOpenSSL, encryption_algorithm=serialization.NoEncryption())
-    _write_bytes_at_path(representation, path)
+    write_bytes_at_path(representation, path)
 
 def create_public_private_key_pair(public_key_name, private_key_name):
     private_key = rsa.generate_private_key(public_exponent=65537,key_size=2048)

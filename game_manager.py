@@ -1,4 +1,4 @@
-import game_actions
+import game_utilities
 
 class Game:
     def __init__(self, creator_username, invited_username):
@@ -17,11 +17,11 @@ class Game:
 
     def compute_player_outcome(self, victory_condition: str, username: str):
         if victory_condition == self.compute_player_piece(username):
-            return game_actions.VICTORY
-        elif victory_condition == game_actions.TIE:
-            return game_actions.TIE
+            return game_utilities.VICTORY
+        elif victory_condition == game_utilities.TIE:
+            return game_utilities.TIE
         else:
-            return game_actions.LOSS
+            return game_utilities.LOSS
 
     def make_move(self, username, move):
         if username != self.current_turn:
@@ -40,7 +40,7 @@ class Game:
         self.current_turn = self.players[0] if self.current_turn == self.players[1] else self.players[1]
 
     def check_winner(self):
-        return game_actions.check_winner(self.board)
+        return game_utilities.determine_outcome(self.board)
 
     def is_over(self):
         return self.check_winner() is not None

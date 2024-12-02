@@ -15,7 +15,7 @@ import connection_handler
 import logging_utilities
 import protocol_definitions
 import protocol
-import game_actions
+import game_utilities
 from commands import create_commands, CommandManager
 import cryptography_boundary
 
@@ -84,9 +84,9 @@ class Client:
     def handle_game_ending(self, opponent_username, outcome):
         """Handle game ending message from the server."""
         outcome_text = 'tie'
-        if outcome == game_actions.LOSS:
+        if outcome == game_utilities.LOSS:
             outcome_text = 'loss'
-        elif outcome == game_actions.VICTORY:
+        elif outcome == game_utilities.VICTORY:
             outcome_text = 'win'
         self.output_text(f"Your game with {opponent_username} ended with a {outcome_text}!")
         if opponent_username == self.current_opponent:
@@ -129,9 +129,9 @@ class Client:
         srow_2 = "".join(gamerow_2)
         srow_3 = "".join(gamerow_3)
 
-        self.information_text = f"{self.username} ({self.current_piece}) vs {self.current_opponent} ({game_actions.compute_other_piece(self.current_piece)})"
-        if not game_actions.check_winner(self.current_game):
-            self.information_text += f"\n{game_actions.compute_current_player(self.current_game)}'s turn."
+        self.information_text = f"{self.username} ({self.current_piece}) vs {self.current_opponent} ({game_utilities.compute_other_piece(self.current_piece)})"
+        if not game_utilities.determine_outcome(self.current_game):
+            self.information_text += f"\n{game_utilities.compute_current_player(self.current_game)}'s turn."
         self.output_text(self.information_text)
         self.output_text(srow_1 + "\n___|___|___ a\n" +
                          srow_2 + "\n___|___|___ b\n" +

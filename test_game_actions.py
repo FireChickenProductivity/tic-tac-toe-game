@@ -1,4 +1,4 @@
-from game_actions import *
+from game_utilities import *
 
 import unittest
 
@@ -17,14 +17,14 @@ def compute_flipped_board(board):
 
 class EndingTestCase(unittest.TestCase):
     def _assert_victory(self, board):
-        self.assertEqual(check_winner(board), 'X')
+        self.assertEqual(determine_outcome(board), 'X')
         flipped_board = compute_flipped_board(board)
-        self.assertEqual(check_winner(flipped_board), 'O')
+        self.assertEqual(determine_outcome(flipped_board), 'O')
 
     def _assert_conditions_match(self, board, condition):
-        self.assertEqual(check_winner(board), condition)
+        self.assertEqual(determine_outcome(board), condition)
         flipped_board = compute_flipped_board(board)
-        self.assertEqual(check_winner(flipped_board), condition)
+        self.assertEqual(determine_outcome(flipped_board), condition)
 
     def _assert_tie(self, board):
         self._assert_conditions_match(board, 'T')
@@ -34,7 +34,7 @@ class EndingTestCase(unittest.TestCase):
 
     def test_empty_board(self):
         expected = None
-        actual = check_winner(' '*9)
+        actual = determine_outcome(' '*9)
         self.assertEqual(expected, actual)
 
     def test_first_row(self):
