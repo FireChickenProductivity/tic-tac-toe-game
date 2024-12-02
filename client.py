@@ -50,6 +50,7 @@ class Client:
         self.output_text = output_text_function
         self.selector = selector
         self.logger = logger
+        self._load_public_key()
         self.create_socket_from_address = socket_creation_function
         self._create_protocol_callback_handler()
         self._create_connection_handler()
@@ -57,6 +58,14 @@ class Client:
         self.has_received_successful_message = False
         self.commands: CommandManager = create_commands(self)
         self.should_reconnect = should_reconnect
+
+    def _load_public_key(self):
+        try:
+            self.public_key = cryptography_boundary.load_public_key()
+        except Exception as e:
+            print(f"An error occurred trying to load the public key for encryption. Please download the public key used by the server and put it in the file {cryptography_boundary.RSA_PUBLIC_KEY_PATH} inside the same directory as the client.py program file.")
+            self.logger.log_message(f"Error loading public encryption key: {e}")
+            exit()
 
     def handle_help_command(self, label):
         if self.commands.has_command(label):
@@ -142,13 +151,12 @@ class Client:
         sock = self.create_socket_from_address(addr)
         connection_information = connection_handler.ConnectionInformation(sock, addr)
         events = selectors.EVENT_READ | selectors.EVENT_WRITE
-        public_key = cryptography_boundary.load_public_key("public_rsa.pem")
         self.connection_handler = connection_handler.ConnectionHandler(
             self.selector,
             connection_information,
             self.logger,
             self.protocol_callback_handler,
-            public_key,
+            self.public_key,
         )
         self.selector.register(sock, events, data=self.connection_handler)
 

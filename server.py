@@ -60,7 +60,7 @@ class Server:
         self.game_handler = GameHandler()
         listening_socket = self.create_socket_from_address((host, port))
         #Define asymmetric encryption keys
-        _, self.private_key = cryptography_boundary.obtain_public_private_key_pair("public_rsa.pem", "private_rsa.pem")
+        _, self.private_key = cryptography_boundary.obtain_public_private_key_pair()
         self.selector.register(listening_socket, selectors.EVENT_READ, data=None)
         self._create_protocol_callback_handler()
         self.should_close = False

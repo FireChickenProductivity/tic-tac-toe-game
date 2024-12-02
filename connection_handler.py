@@ -256,8 +256,8 @@ class ConnectionHandler:
 
     def set_symmetric_key(self, parameters):
         encryption_function, decryption_function = cryptography_boundary.create_symmetric_key_encryptor_and_decryptor_from_number_and_input_vector(*parameters)
-        self.message_receiver.set_decryption_function(decryption_function, cryptography_boundary.BLOCK_SIZE)
-        self.message_sender.set_encryption_function(encryption_function, cryptography_boundary.BLOCK_SIZE - 1)
+        self.message_receiver.set_decryption_function(decryption_function, cryptography_boundary.SYMMETRIC_BLOCK_SIZE)
+        self.message_sender.set_encryption_function(encryption_function, cryptography_boundary.SYMMETRIC_BLOCK_SIZE - 1)
         self.message_receiver.can_now_handle_second_block()
         self.message_receiver.process_already_received_data()
 
