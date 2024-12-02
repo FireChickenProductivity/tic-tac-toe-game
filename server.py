@@ -20,6 +20,7 @@ import sqlite3 #Imported for database exceptions only
 import cryptography_boundary
 
 MUST_LOG_IN_TEXT = "You must login before using that command!"
+CANNOT_PLAY_SELF_TEXT = "You cannot play a game against yourself!"
 
 class AssociatedConnectionState:
     """Data structure for holding variables associated with a connection"""
@@ -118,9 +119,16 @@ class Server:
             self._send_text_message(MUST_LOG_IN_TEXT, connection_information)
             return False
 
+    def _validate_opponent_not_self(self, opponent_user_name, main_player_state, main_player_connection_information):
+        if main_player_state.username != opponent_user_name:
+            return True
+        else:
+            self._send_text_message(CANNOT_PLAY_SELF_TEXT, main_player_connection_information)
+            return False
+
     def handle_game_creation(self, invited_user_username, connection_information):
         creator_state = self.connection_table.get_entry_state(connection_information)
-        if self._validate_user_logged_in(creator_state, connection_information):
+        if self._validate_user_logged_in(creator_state, connection_information) and self._validate_opponent_not_self(invited_user_username, creator_state, connection_information):
             creator_username = creator_state.username
             is_game_created = self.game_handler.create_game(creator_username, invited_user_username)
             if is_game_created:
@@ -134,7 +142,7 @@ class Server:
     def handle_game_join(self, other_player_username, connection_information):
         joiner_state = self.connection_table.get_entry_state(connection_information)
         joiner_username = joiner_state.username
-        if self._validate_user_logged_in(joiner_state, connection_information):
+        if self._validate_user_logged_in(joiner_state, connection_information) and self._validate_opponent_not_self(other_player_username, joiner_state, connection_information):
             if not self.game_handler.game_exists(joiner_username, other_player_username):
                 self.handle_game_creation(other_player_username, connection_information)
             game = self.game_handler.get_game(joiner_username, other_player_username)
