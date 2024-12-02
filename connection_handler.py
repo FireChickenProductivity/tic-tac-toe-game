@@ -36,6 +36,16 @@ class ConnectionInformation:
         ip_address, port = self.addr
         self.text_representation = f"{ip_address}:{port}"
 
+def convert_every_n_bytes(conversion_function, n, input_bytes):
+    i = 0
+    result = b""
+    while i < len(input_bytes):
+        relevant_bytes = input_bytes[i:i + n]
+        converted_bytes = conversion_function(relevant_bytes)
+        result += converted_bytes
+        i += n
+    return result
+
 class MessageSender:
     def __init__(self, logger, connection_information: ConnectionInformation, protocol_map, close_callback):
         """A message sender is responsible for transmitting a message as bytes to a connection peer
@@ -76,7 +86,8 @@ class MessageSender:
     def send_message(self, message: Message):
         """Starts transmitting the message with specified type code and values to the connection peer"""
         message_bytes = self.protocol_map.pack_values_given_type_code(message.type_code, *message.values)
-        self.buffer += message_bytes
+        encrypted_bytes = convert_every_n_bytes(self.encryption_function, self.block_size, message_bytes)
+        self.buffer += encrypted_bytes
         self.logger.handle_debug_message(MessageEvent(message, self.addr), SENDING_MESSAGE_LOG_CATEGORY)
 
 class MessageReceiver:
@@ -99,10 +110,6 @@ class MessageReceiver:
         self.decryption_function = None
         self.block_size = 0
         self.set_symmetric_encryption_key = set_symmetric_encryption_key
-        self.ready_for_second_message: bool = False
-
-    def prepare_for_second_message(self):
-        self.ready_for_second_message = True
 
     def set_decryption_function(self, value, block_size):
         self.decryption_function = value
