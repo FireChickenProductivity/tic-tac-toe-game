@@ -129,28 +129,30 @@ class MessageHandler:
             self.is_done = True
         else:
             self._update_next_expected_size()
-            self._update_values_based_on_message_protocol_with_fields()
 
     def _update_values_based_on_message_protocol_with_fields(self):
-        """Perform the next step of parsing the message"""
+        """Parse as much of the message as possible"""
         #If no processing has been done yet, advance field to get information on the first field
         if self.field_index < 0:
             self._advance_field()
-        number_of_new_bytes = len(self.bytes) - self.bytes_index
-        #If the expected size of the next field has not been identified yet, compute it first
-        if not self.next_expected_size and number_of_new_bytes >= self.protocol.compute_variable_length_field_max_size(self.field_index):
-            self.next_expected_size = self.protocol.unpack_field_length(
-                self.field_index,
-                self.bytes,
-                self.bytes_index
-            )
-            size_field_size_in_bytes = self.protocol.compute_variable_length_field_max_size(self.field_index)
-            self.bytes_index += size_field_size_in_bytes
-            number_of_new_bytes -= size_field_size_in_bytes
-        #If the expected size of the next field has been identified, process the next field
-        if self.next_expected_size:
-            if number_of_new_bytes >= self.next_expected_size:
+        data_is_left_that_can_be_processed = True
+        while data_is_left_that_can_be_processed and not self.is_done:
+            number_of_new_bytes = len(self.bytes) - self.bytes_index
+            #If the expected size of the next field has not been identified yet, compute it first
+            if not self.next_expected_size and number_of_new_bytes >= self.protocol.compute_variable_length_field_max_size(self.field_index):
+                self.next_expected_size = self.protocol.unpack_field_length(
+                    self.field_index,
+                    self.bytes,
+                    self.bytes_index
+                )
+                size_field_size_in_bytes = self.protocol.compute_variable_length_field_max_size(self.field_index)
+                self.bytes_index += size_field_size_in_bytes
+                number_of_new_bytes -= size_field_size_in_bytes
+            #If the expected size of the next field has been identified, process the next field
+            if self.next_expected_size and number_of_new_bytes >= self.next_expected_size:
                 self._advance_field()
+            else:
+                data_is_left_that_can_be_processed = False
 
     def _update_values(self):
         if self.protocol.get_number_of_fields() == 0:
