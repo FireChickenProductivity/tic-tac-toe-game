@@ -91,25 +91,24 @@ class MessageSender:
         self.logger.handle_debug_message(MessageEvent(message, self.addr), SENDING_MESSAGE_LOG_CATEGORY)
 
 class MessageReceiver:
-    def __init__(self, logger, connection_information: ConnectionInformation, receiving_protocol_map: protocol.ProtocolMap, close_callback, set_symmetric_encryption_key):
+    def __init__(self, logger, connection_information: ConnectionInformation, receiving_protocol_map: protocol.ProtocolMap, close_callback):
         """
             Converts messages received over a connection into Message objects
             logger: a logger object for logging errors and significant occurrences
             connection_information: information on the connection used to receive bytes
             message_handler: a protocol map for handling received messages
             close_callback: a callback function to use to close the current connection
-            set_symmetric_encryption_key: a callback function to update the current symmetric encryption key
         """
         self.logger = logger
         self.sock = connection_information.sock
         self.addr = connection_information.addr
         self.message_handler: protocol.MessageHandler = protocol.MessageHandler(receiving_protocol_map)
+        self.encrypted_buffer = b""
         self.buffer = b""
         self.messages = []
         self.close_callback = close_callback
         self.decryption_function = None
         self.block_size = 0
-        self.set_symmetric_encryption_key = set_symmetric_encryption_key
 
     def set_decryption_function(self, value, block_size):
         self.decryption_function = value
@@ -130,7 +129,7 @@ class MessageReceiver:
             raise PeerDisconnectionException("Peer closed.")
         else:
             if data:
-                self.buffer += data
+                self.encrypted_buffer += data
             else:
                 raise PeerDisconnectionException("Peer closed.")
     
@@ -139,7 +138,7 @@ class MessageReceiver:
         self._read()
         #This loop is necessary because the selector will only call read when bytes are received, 
         #so this is needed to handle messages that arrived in the same chunk of bytes
-        while len(self.buffer) > 0:
+        while len(self.encrypted_buffer) > self.block_size:
             self.process_message()
     
     def process_complete_message(self):
@@ -164,6 +163,9 @@ class MessageReceiver:
 
     def process_message(self):
         """Converts bytes into messages"""
+        encrypted_data = self.encrypted_buffer[0:self.block_size]
+        self.buffer += self.decryption_function(encrypted_data)
+        self.encrypted_buffer = self.encrypted_buffer[self.block_size:]
         self.message_handler.receive_bytes(self.buffer)
         if self.message_handler.is_done_obtaining_values():
             self.process_complete_message()
@@ -212,7 +214,7 @@ class ConnectionHandler:
         #Pick the correct protocol maps based on if this is the client or the server
         sending_protocol_map, receiving_protocol_map = compute_sending_and_receiving_protocol_maps(is_server)
         self.receiving_protocol_map = receiving_protocol_map
-        self.message_receiver = MessageReceiver(self.logger, self.connection_information, receiving_protocol_map, self.close, self.set_symmetric_key)
+        self.message_receiver = MessageReceiver(self.logger, self.connection_information, receiving_protocol_map, self.close)
         self.message_sender = MessageSender(self.logger, self.connection_information, sending_protocol_map, self.close)
 
         if self.is_server:
@@ -250,7 +252,9 @@ class ConnectionHandler:
         request = self.message_receiver.extract_message()
         if self.callback_handler.has_protocol(request.type_code):
             self.respond_to_request(request)
-        else:
+        elif request.type_code == protocol_definitions.SYMMETRIC_KEY_TRANSMISSION_PROTOCOL_TYPE_CODE:
+            self.set_symmetric_key(*request.values)
+        else:   
             print("Unidentified protocol received", request.type_code, f"values: {request.values}")
         
     def read(self):
