@@ -64,7 +64,8 @@ class TestClientHandler:
             selector,
             self.logger,
             output_text_function=output_text_function,
-            socket_creation_function=socket_creation_function
+            socket_creation_function=socket_creation_function,
+            should_reconnect=False
         )
         self.credentials = credentials
         self.commands = []

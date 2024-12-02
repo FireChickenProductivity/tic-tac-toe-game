@@ -28,7 +28,7 @@ class Client:
     #The default and maximum amount of time to wait in between reconnection attempts
     DEFAULT_RECONNECTION_TIMEOUT = 5
     MAXIMUM_RECONNECTION_TIMEOUT = 30
-    def __init__(self, host, port, selector, logger, *, output_text_function = print, socket_creation_function = create_socket_from_address):
+    def __init__(self, host, port, selector, logger, *, output_text_function = print, socket_creation_function = create_socket_from_address, should_reconnect = True):
         """
             Handles the client side of interactions with a server
             host: the server's host address
@@ -37,6 +37,7 @@ class Client:
             logger: the logger to use for logging significant occurrences or errors
             output_text_function: the function used to output text for the client. This is settable as an argument primarily to aid with testing
             socket_creation_function: the function used to create the socket from an address, which is settable to help with testing
+            should_reconnect: determines if the client should reconnect on disconnection. Set to false for testing purposes when reconnecting is not desired.
         """
         self.username = None
         self.password = None
@@ -55,6 +56,7 @@ class Client:
         self.is_closed = False
         self.has_received_successful_message = False
         self.commands: CommandManager = create_commands(self)
+        self.should_reconnect = should_reconnect
 
     def handle_help_command(self, label):
         if self.commands.has_command(label):
@@ -251,9 +253,13 @@ class Client:
                         if mask & selectors.EVENT_READ:
                             self.has_received_successful_message = True
                     except connection_handler.PeerDisconnectionException:
-                        print("Connection failure detected. Attempting reconnection...")
-                        self.pause_in_between_reconnection_attempts()
-                        self.reconnect()
+                        if self.should_reconnect:
+                            print("Connection failure detected. Attempting reconnection...")
+                            self.pause_in_between_reconnection_attempts()
+                            self.reconnect()
+                        else:
+                            print("A connection failure occurred.")
+                            self.close()
                     except Exception:
                         self.logger.log_message(
                             f"main: error: exception for {message.connection_information.addr}:\n{traceback.format_exc()}",
