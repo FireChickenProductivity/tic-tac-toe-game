@@ -176,7 +176,7 @@ class Client:
     def reconnect(self):
         """Attempts to reconnect to the server"""
         self.close(should_reconnect=True)
-        self.reset_game_state()
+        self.reset_game_board()
         done = False
         while not done and not self.is_closed:
             try:
@@ -184,14 +184,19 @@ class Client:
                 self._create_connection_handler()
                 if self.has_attempted_login():
                     self.login()
+                    if self.current_opponent is not None:
+                        self.perform_command_from_text_input('join ' + self.current_opponent)
                 done = True
             except connection_handler.PeerDisconnectionException:
                 done = False
                 self.pause_in_between_reconnection_attempts()
 
-    def reset_game_state(self):
+    def reset_game_board(self):
         self.current_game = None
         self.current_piece = None
+        
+    def reset_game_state(self):
+        self.reset_game_board()
         self.current_opponent = None
 
     def handle_command(self, action, value):
