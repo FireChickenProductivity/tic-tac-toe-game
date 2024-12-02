@@ -5,7 +5,7 @@ This is a simple Tic-Tac-Toe game project that is implemented using Python and s
 ## How to Play
 You can play the game by doing the following:
 
-1. **Start the server:** Run the `server.py` script: it requires the input -p (port number). The host can optionally be specified with -i (IP address). If unspecified, the server is started at address 0.0.0.0. These command line arguments specify the host and port location that the server will be hosted at. Sample usages: 'python server.py -p 65432' or 'python server.py -p 7745 -i localhost'.
+1. **Start the server:** Run the `server.py` script: it requires the input -p (port number). The host can optionally be specified with -i (IP address). If unspecified, the server is started at address 0.0.0.0. These command line arguments specify the host and port location that the server will be hosted at. Sample usages: 'python server.py -p 65432' or 'python server.py -p 7745 -i localhost'. Running the server will generate a public encryption key inside the file "public_rsa.pem". Users must place this in the same directory as their client program for to be able to communicate successfully with the server. 
 2. **Connect clients:** Run the `client.py` script on any desired number of different machines or terminals. This also requires command line arguments -i (host) -p (port).
 3. **Play the game:** Players take turns entering their moves. The first player to get three in a row wins!
 
@@ -15,7 +15,7 @@ Commands:
 * **Register an account:** Upon successfully connecting to the server, you must register an account. To do this, type 'register' followed by your chosen username and password into the terminal, seperated by spaces.
 * **Login to an account:** After you have created an account, you will need to login. Type 'login' followed by your registered username and password into the terminal, seperated by spaces.
 * **Create a game:** To create a new game, type 'create' into the terminal followed by the username of your opponent.
-* **Join a game:** To join a game, type 'join' followed by your opponent's username. A game creator must join their game to make moves in it. 
+* **Join a game:** To join a game, type 'join' followed by your opponent's username. A game creator must join their game to make moves in it using the username of the other player. 
 * **Make a move:** To make a move, choose a space on the board and find it's corresponding coordinate. The rows are designated by 'a', 'b', or 'c'. The columns are '1', '2', or '3'. An example coordinate would be 'b3'. Type 'move' followed by the chosen coordinate into the terminal to make your move. You can only make a move on empty spaces.
 * **Quit the game:** To quit a game, enter 'quit' into the terminal.
 * **Help!:** If you'd like to see these commands during the game, type 'help', and the options will be displayed. Type 'help' followed by the command you would like more information about.
@@ -50,6 +50,7 @@ Message Protocols for Communicating From the Client to the Server:
 * Quit game request: consists only of the type code .
 * Chat message protocol: a text message protocol the string containing a chat message to send to the other person playing the active game. There is no expected response message.
 * Game creation protocol: a small text message protocol with the string containing the name of the player to invite to the game. The expected response is a text message explaining if the game creation was successful. 
+* Symmetric encryption key message protocol: communicates a symmetric encryption key to the server through asymmetric encryption to be used for further communications between the client and server. Consists of a type code followed by the 32 byte encryption key and a 16 byte initialization vector.
 
 Message Protocols for Communicating From the Server to the Client:
 * Text message response: a text message protocol with for giving miscellaneous updates to the client. 
@@ -61,6 +62,7 @@ Message Protocols for Communicating From the Server to the Client:
 ## Technologies Used
 * Python
 * Sockets
+* Python Cryptography library
 
 ## Logging
 Logs are utilized to document errors as well as client and server connect/disconnect events. These are located in the 'logs' directory under 'client.log' and 'server.log'. 
@@ -70,6 +72,7 @@ Logs are utilized to document errors as well as client and server connect/discon
 * [Link to Sockets Documentation](https://docs.python.org/3/library/socket.html#example)
 * [Link to Socket Tutorial](https://docs.python.org/3/howto/sockets.html)
 * [Statement of Work](https://github.com/FireChickenProductivity/tic-tac-toe-game/blob/main/StatementOfWork.md)
+* [Python Cryptography Library](https://cryptography.io/en/43.0.0/)
 
 # Mock Socket Testing Framework
 Interactions between the server and clients can be tested with a custom unit testing framework that simulates sockets and selectors. See mock_socket.py and testing_utilities.py for the code. Tests written in this framework can be seen in test_communication.py. 
