@@ -114,7 +114,7 @@ def create_single_character_string_protocol_field():
     return create_fixed_length_string_protocol_field(1)
 
 def create_large_fixed_length_integer_protocol_field(size_in_bytes):
-    struct_text = f"B"*size_in_bytes
+    struct_text = f"{size_in_bytes}B"
     def encode_value(value: bytes):
         return [individual_byte for individual_byte in value]
     def decode_value(value):

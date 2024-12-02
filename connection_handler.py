@@ -225,7 +225,7 @@ class ConnectionHandler:
 
     def _create_symmetric_key(self):
         parameters = cryptography_boundary.create_symmetric_key_parameters()
-        self.send_message(Message(protocol_definitions.SYMMETRIC_KEY_TRANSMISSION_PROTOCOL_TYPE_CODE), parameters)
+        self.send_message(Message(protocol_definitions.SYMMETRIC_KEY_TRANSMISSION_PROTOCOL_TYPE_CODE, parameters))
         self.set_symmetric_key(parameters)
 
     def set_symmetric_key(self, parameters):

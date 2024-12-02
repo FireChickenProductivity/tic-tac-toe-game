@@ -262,5 +262,5 @@ def create_username_and_single_character_message_protocol(type_code: int):
 
 def create_symmetric_key_message_protocol(type_code: int):
     initialization_vector_field = create_sixteen_byte_integer_protocol_field()
-    number_vector_field = create_thirty_two_byte_integer_protocol_field()
-    return MessageProtocol(type_code, [initialization_vector_field, number_vector_field])
+    number_field = create_thirty_two_byte_integer_protocol_field()
+    return MessageProtocol(type_code, [number_field, initialization_vector_field])

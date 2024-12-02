@@ -15,6 +15,7 @@ import protocol_definitions
 import protocol
 import game_actions
 from commands import create_commands, CommandManager
+import cryptography_boundary
 
 def create_socket_from_address(target_address):
     """Creates a client socket that connects to the specified address"""
@@ -139,11 +140,13 @@ class Client:
         sock = self.create_socket_from_address(addr)
         connection_information = connection_handler.ConnectionInformation(sock, addr)
         events = selectors.EVENT_READ | selectors.EVENT_WRITE
+        public_key = cryptography_boundary.load_public_key("public_rsa.pem")
         self.connection_handler = connection_handler.ConnectionHandler(
             self.selector,
             connection_information,
             self.logger,
             self.protocol_callback_handler,
+            public_key,
         )
         self.selector.register(sock, events, data=self.connection_handler)
 
