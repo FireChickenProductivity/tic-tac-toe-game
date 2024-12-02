@@ -178,7 +178,7 @@ class Client:
         self.close(should_reconnect=True)
         self.reset_game_state()
         done = False
-        while not done:
+        while not done and not self.is_closed:
             try:
                 print("Trying to reconnect...")
                 self._create_connection_handler()
