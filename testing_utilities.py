@@ -1,3 +1,5 @@
+#Add testing utilities for doing integration and client testing
+
 import time
 from threading import Thread
 from protocol import Message
@@ -7,6 +9,8 @@ from database_management import insert_account_into_database_at_path_if_nonexist
 import connection_handler
 from logging_utilities import PrimaryMemoryLogger
 from mock_socket import MockSelector, MockInternet
+
+#Utility code
 
 class TimeoutException(Exception):
     """An exception indicating that something timed out"""
@@ -42,6 +46,8 @@ class Credentials:
 
     def __str__(self):
         return self.username + " " + self.password
+
+#Code for managing mock clients and servers
 
 class TestClientHandler:
     def __init__(self, host, port, selector, socket_creation_function, credentials: Credentials=None):
@@ -127,24 +133,6 @@ class ReceivedMessagesLengthWaitingCommand(WaitingCommand):
         relevant_log = client.get_log(connection_handler.RECEIVING_MESSAGE_LOG_CATEGORY)
         return len(relevant_log) >= self.length
 
-def is_type_code_in_log(type_code, log):
-    for event in log:
-        if type_code == event.message.type_code:
-            return True
-    return False
-
-class ReceivedMessageWaitingCommand(WaitingCommand):
-    def __init__(self, type_code, length=0):
-        self.type_code = type_code
-        self.length = length
-
-    def condition_function(self, client: TestClientHandler):
-        relevant_log = client.get_log(connection_handler.RECEIVING_MESSAGE_LOG_CATEGORY)
-        if len(relevant_log) < self.length:
-            return False
-        relevant_log = relevant_log[self.length:]
-        return is_type_code_in_log(self.type_code, relevant_log)
-
 class TestServerHandler:
     def __init__(self, host, port, selector, database_path, listening_socket_creation_function):
         self.logger = PrimaryMemoryLogger()
@@ -192,6 +180,7 @@ def create_simple_password(username: str):
     return username + str(len(username)) + username[0]*5
 
 class SkipItem:
+    """Used to indicate that the test should ignore what is at this index and the actual result"""
     pass
 
 class TextMatcher:
@@ -216,6 +205,7 @@ class TestCase:
     DEFAULT_SERVER_HOST = 'localhost'
     DEFAULT_SERVER_ADDRESS = (DEFAULT_SERVER_HOST, DEFAULT_SERVER_PORT)
     def __init__(self, server_host=DEFAULT_SERVER_HOST, server_port=DEFAULT_SERVER_PORT, database_path="testing.db", password_function=create_simple_password, should_perform_automatic_login=False):
+        """Test case for managing client and server behavior using mock clients and a mock server"""
         self.server_host = server_host
         self.server_port = server_port
         self.factory = TestingFactory(server_host, server_port)
@@ -347,6 +337,7 @@ class TestCase:
         output = self.get_output(user_name)
         self._assert_match(values, output, self._value_matches_output)
 
+#Setup testing database
 def setup():
     create_database_at_path("testing.db")
 setup()

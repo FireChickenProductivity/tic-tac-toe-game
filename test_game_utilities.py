@@ -1,27 +1,33 @@
+#Automated tests for the game utilities file
+
 from game_utilities import *
 
 import unittest
 
 def compute_flipped_board(board):
+    """Computes the board with pieces swapped between the player"""
     flip = ""
     for character in board:
-        flipped_character = ' '
-        if character == 'X':
-            flipped_character = 'O'
-        elif character == 'O':
-            flipped_character = 'X'
+        flipped_character = EMPTY_POSITION
+        if character == X_PIECE:
+            flipped_character = O_PIECE
+        elif character == O_PIECE:
+            flipped_character = X_PIECE
         flip += flipped_character
     return flip
 
 
 
 class EndingTestCase(unittest.TestCase):
+    #Utility methods
     def _assert_victory(self, board):
-        self.assertEqual(determine_outcome(board), 'X')
+        """Assert that player X wins on the board and player O wins on the flipped board"""
+        self.assertEqual(determine_outcome(board), X_PIECE)
         flipped_board = compute_flipped_board(board)
-        self.assertEqual(determine_outcome(flipped_board), 'O')
+        self.assertEqual(determine_outcome(flipped_board), O_PIECE)
 
     def _assert_conditions_match(self, board, condition):
+        """Assert that the same condition happens on the board and the flipped board"""
         self.assertEqual(determine_outcome(board), condition)
         flipped_board = compute_flipped_board(board)
         self.assertEqual(determine_outcome(flipped_board), condition)
@@ -34,19 +40,19 @@ class EndingTestCase(unittest.TestCase):
 
     def test_empty_board(self):
         expected = None
-        actual = determine_outcome(' '*9)
+        actual = determine_outcome(EMPTY_POSITION*9)
         self.assertEqual(expected, actual)
 
     def test_first_row(self):
-        board = 'X'*3 + 'OO' + ' '*4
+        board = X_PIECE*3 + 'OO' + EMPTY_POSITION*4
         self._assert_victory(board)
 
     def test_second_row(self):
-        board = 'OO ' + 'X'*3 + ' '*3
+        board = 'OO ' + X_PIECE*3 + EMPTY_POSITION*3
         self._assert_victory(board)
 
     def test_last_row(self):
-        board = 'OO ' + ' '*3 + 'X'*3
+        board = 'OO ' + EMPTY_POSITION*3 + X_PIECE*3
         self._assert_victory(board)
 
     def test_first_column(self):
