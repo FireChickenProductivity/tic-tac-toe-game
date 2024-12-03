@@ -327,6 +327,7 @@ class ConnectionHandler:
     def close(self):
         """Cleans up the connection"""
         self.logger.log_message(f"closing connection to {self.connection_information.addr}")
+        if self.connection_information.sock: self.start_writing()
         try:
             self.selector.unregister(self.connection_information.sock)
         except Exception as e:

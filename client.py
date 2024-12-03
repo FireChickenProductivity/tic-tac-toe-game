@@ -312,6 +312,7 @@ def perform_user_commands_through_connection(client: Client):
             done = True
         else:
             client.perform_command_from_text_input(user_input)
+    print('exiting...')
     client.close()
 
 def splash():
