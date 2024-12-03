@@ -128,10 +128,13 @@ class Server:
         if account is None or password != account.password:
             text = f"No account with username matches your password!"
         else:
-            text = f"You are signed in as {username}!"
             state = self.connection_table.get_entry_state(connection_information)
-            state.username = username
-            self.usernames_to_connections[username] = connection_information
+            if state.username is not None:
+                text = "You have already signed in. Please start a new session if you want to sign in under another account."
+            else:
+                text = f"You are signed in as {username}!"
+                state.username = username
+                self.usernames_to_connections[username] = connection_information
         self._send_text_message(text, connection_information)
 
     def handle_game_creation(self, invited_user_username, connection_information):
@@ -142,7 +145,10 @@ class Server:
             if is_game_created:
                 text = "The game was created!"
             else:
-                text = "The game could not be created."
+                if self.game_handler.game_exists(creator_username, invited_user_username):
+                    text = "The game could not be created because it already exists and is unfinished."
+                else:
+                    text = "The game could not be created."
             self._send_text_message(text, connection_information)
             if is_game_created:
                 self._send_text_message(f"{creator_username} invited you to a game!", invited_user_username)
