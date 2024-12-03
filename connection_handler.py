@@ -94,7 +94,6 @@ class MessageSender:
                 # Resource temporarily unavailable (errno EWOULDBLOCK)
                 pass
             except OSError as exception:
-                print("Error: A Connection Failure Occurred!")
                 self.logger.log_message(f"{exception} trying to connect to {self.addr}")
                 self.close_callback()
             else:
@@ -148,7 +147,6 @@ class MessageReceiver:
             # Resource temporarily unavailable (errno EWOULDBLOCK)
             pass
         except OSError as exception:
-            print('Error: A Connection Failure Occurred!')
             self.logger.log_message(f"{exception} trying to connect to {self.addr}")
             self.close_callback()
             raise PeerDisconnectionException("Peer closed.")
