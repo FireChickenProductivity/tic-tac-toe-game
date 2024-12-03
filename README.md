@@ -23,7 +23,7 @@ Commands:
 
 Reconnection:
 
-When the client program detects a problem with the server connection, it tries to reconnect with the server. The amount of time that it waits after each subsequent reconnection attempt increases until it reaches the maximum waiting time of 30 seconds. If the client program receives a message from the server, it resets the waiting time back to the minimum. The user currently has to log in again after the reconnection.
+When the client program detects a problem with the server connection, it tries to reconnect with the server. The amount of time that it waits after each subsequent reconnection attempt increases until it reaches the maximum waiting time of 30 seconds. If the client program receives a message from the server, it resets the waiting time back to the minimum. If the user has already tried to log in, the client tries to log in again using the previous credentials. If the user was previously in a game, the client tries to rejoin the same game.
 
 ## Game Message Protocol Specification
 The game message protocol defines the structure and format of messages exchanged between the server and clients.
