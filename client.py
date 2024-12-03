@@ -162,7 +162,7 @@ class Client:
         self.logger.log_message(connection_text)
         sock = self.create_socket_from_address(addr)
         connection_information = connection_handler.ConnectionInformation(sock, addr)
-        events = selectors.EVENT_READ | selectors.EVENT_WRITE
+        events = selectors.EVENT_READ
         self.connection_handler = connection_handler.ConnectionHandler(
             self.selector,
             connection_information,
@@ -171,6 +171,7 @@ class Client:
             self.public_key,
         )
         self.selector.register(sock, events, data=self.connection_handler)
+        self.connection_handler._create_symmetric_key()
 
     def send_message(self, message: protocol.Message):
         """Sends the message to the server"""
@@ -273,7 +274,7 @@ class Client:
         """Responds to socket write and read events"""
         try:
             while not self.is_closed:
-                events = self.selector.select(timeout=None)
+                events = self.selector.select(timeout=5)
                 for key, mask in events:
                     message = key.data
                     try:
@@ -311,6 +312,7 @@ def perform_user_commands_through_connection(client: Client):
             done = True
         else:
             client.perform_command_from_text_input(user_input)
+    print('exiting...')
     client.close()
 
 def splash():
@@ -339,8 +341,8 @@ def main():
 
     #Parse command line arguments
     parser = argparse.ArgumentParser(prog='client.py', description='The client program for playing tictactoe.', usage=f"usage: {sys.argv[0]} -i <host> -p <port>")
-    parser.add_argument("-i")
-    parser.add_argument("-p", type=int)
+    parser.add_argument("-i", help="The IP address of the server.")
+    parser.add_argument("-p", type=int, help="The port that the server is running on.")
     arguments = parser.parse_args()
 
     if None in [arguments.i, arguments.p]:
