@@ -31,10 +31,17 @@ def generate_feedback_text_on_excessively_long_password_input():
 
 def _parse_two_space_separated_values(text):
     """Parses text into 2 space separated values. Returns None on failure."""
-    values = text.split(" ", maxsplit=1)
+    values = text.strip().split(" ", maxsplit=1)
     if len(values) != 2:
         return None
     return values
+
+def _compute_error_text_on_failed_submission_of_username_and_password(value):
+    if " " not in value and len(value) > 0:
+        result = 'Remember to include your password followed by a space!'
+    else:
+        result = "You forgot to include your username and password!"
+    return result
 
 #Commands are defined using a Command object that helps associate information like the command name and help message with an action to be performed when the command is executed. Command action functions return a string to give output back to the user and return a Message object to send a request to the server.
 
@@ -83,7 +90,7 @@ def make_move(client, value):
 
 def create_game(client, value):
     if value == "":
-        return "To create a game, you must specify the username of your opponent."
+        return "You forgot to specify who you want to invite to your game!"
     elif not client.has_attempted_login():
         return "You must log in before creating a game!"
     elif not is_valid_username(value):
@@ -95,7 +102,7 @@ def create_game(client, value):
 
 def join_game(client, value):
     if value == "":
-        return "To join a game, you must specify the username of the person you are playing against."
+        return "You forgot to specify who you want to play against!"
     elif not client.has_attempted_login():
         return "You must log in before joining a game!"
     elif not is_valid_username(value):
@@ -117,7 +124,7 @@ def quit_game(client, value):
 def register_account(client, value):
     values = _parse_two_space_separated_values(value)
     if values is None:
-        result ='When creating an account, you must provide a username, press space, and provide your password!'
+        result = _compute_error_text_on_failed_submission_of_username_and_password(value)
     elif client.get_current_game() is not None:
         result = "You cannot register an account in the middle of a game!"
     elif not is_valid_username(values[0]):
@@ -132,7 +139,7 @@ def login(client, value):
     values = _parse_two_space_separated_values(value)
     result = None
     if values is None:
-        result = 'When logging in, you must provide a username, press space, and provide your password!'
+        result = _compute_error_text_on_failed_submission_of_username_and_password(value)
     elif client.get_current_game() is not None:
         result = "You cannot log in to an account in the middle of a game!"
     elif not is_valid_username(values[0]):
@@ -203,7 +210,7 @@ def create_commands(client):
         ),
         create_command_for_client(
             'login',
-            "After you have created an account, you will need to login. Type 'login' followed by your registered username and password into the terminal, seperated by spaces.",
+            "To login type 'login' followed by your registered username and password into the terminal, seperated by spaces.",
             login
         ),
         create_command_for_client(
