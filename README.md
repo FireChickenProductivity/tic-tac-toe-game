@@ -58,10 +58,9 @@ Message Protocols for Communicating From the Server to the Client:
 * Game ending protocol: a single username and single character message protocol. This is sent at the end of a game. The single character at the end describes if the game ended in a win, loss, or tie for the notified player. The username contains the name of the opponent to allow distinguishing between games.
 * Game piece protocol: a single character message protocol containing the game piece belonging to the messaged player. This is sent when a player joins a game.
 
-## Technologies Used
-* Python
-* Sockets
-* Python Cryptography library
+## Requirements to Run The Project
+* Python3.11
+* Python Cryptography library: the project was tested with cryptography version 43.0.0 and may not work with other versions of the library.
 
 ## Logging
 Logs are utilized to document errors as well as client and server connect/disconnect events. These are located in the 'logs' directory under 'client.log' and 'server.log'. 
