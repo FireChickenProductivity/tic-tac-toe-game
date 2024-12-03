@@ -270,8 +270,8 @@ class Server:
 def main():
     """The entry point for the server program"""
     parser = argparse.ArgumentParser(prog='server.py', description='The server program for hosting tictactoe games.', usage=f"usage: {sys.argv[0]} [-i <host>] -p <port>")
-    parser.add_argument("-i", default="0.0.0.0")
-    parser.add_argument("-p", type=int)
+    parser.add_argument("-i", default="0.0.0.0", help="Optional argument giving the IP address to host the server on. This should only be used for testing.")
+    parser.add_argument("-p", type=int, help="The port to run the server on.")
     arguments = parser.parse_args()
 
     #Handle the arguments

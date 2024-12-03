@@ -341,8 +341,8 @@ def main():
 
     #Parse command line arguments
     parser = argparse.ArgumentParser(prog='client.py', description='The client program for playing tictactoe.', usage=f"usage: {sys.argv[0]} -i <host> -p <port>")
-    parser.add_argument("-i")
-    parser.add_argument("-p", type=int)
+    parser.add_argument("-i", help="The IP address of the server.")
+    parser.add_argument("-p", type=int, help="The port that the server is running on.")
     arguments = parser.parse_args()
 
     if None in [arguments.i, arguments.p]:
