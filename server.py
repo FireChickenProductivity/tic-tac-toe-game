@@ -82,9 +82,10 @@ class Server:
 
     #Utility methods
     def _compute_opponent_username(self, username: str):
-        state = self.connection_table.get_entry_state(username)
-        if state is not None and state.current_game is not None:
-            return state.current_game.compute_other_player(username)
+        if username in self.usernames_to_connections:
+            state = self.connection_table.get_entry_state(username)
+            if state is not None and state.current_game is not None:
+                return state.current_game.compute_other_player(username)
         return None
 
     def _send_message_to_opponent(self, player_username: str, message: Message):
