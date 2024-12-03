@@ -176,21 +176,28 @@ class TestCommunication(unittest.TestCase):
         testcase.assert_received_values_match_log(expected_bob_messages, 'Bob')
 
     def perform_gameplay_test(self, final_state, expected_first_player_outcome, expected_second_player_outcome):
+        """Tests gameplay reaching the final state"""
         testcase = TestCase(should_perform_automatic_login=True)
         bob_messages_number_before_game_starts = 5
         alice_messages_number_before_game_starts = 6
+
+        #Compute the client commands and board state update messages corresponding to the final board state
         bob_move_commands, alice_move_commands = compute_game_playing_actions_creating_board_state(
             final_state,
             bob_messages_number_before_game_starts,
             alice_messages_number_before_game_starts
         )
         board_state_update_messages = compute_sequential_game_playing_update_messages(final_state)
+
+        #Buffer the client commands
         bob_commands = ["create Alice", 3, 'join Alice', bob_messages_number_before_game_starts]
         bob_commands.extend(bob_move_commands)
         alice_commands = [2, 'join Bob', alice_messages_number_before_game_starts]
         alice_commands.extend(alice_move_commands)
         testcase.buffer_client_commands("Bob", bob_commands)
         testcase.buffer_client_commands("Alice", alice_commands)
+
+        #Assert the expected messages are received at the client
         expected_bob_messages = [
             SkipItem(),
             GAME_CREATION_MESSAGE,
@@ -199,6 +206,7 @@ class TestCommunication(unittest.TestCase):
             EMPTY_GAME_BOARD_MESSAGE,
         ] + board_state_update_messages
         expected_bob_messages.append(create_result_message("Alice", expected_first_player_outcome))
+
         expected_alice_messages = [
             SkipItem(),
             create_text_message("Bob invited you to a game!"),
@@ -207,6 +215,7 @@ class TestCommunication(unittest.TestCase):
             create_text_message("Bob has joined your game!"),
         ] + board_state_update_messages
         expected_alice_messages.append(create_result_message("Bob", expected_second_player_outcome))
+        
         testcase.run()
         testcase.assert_received_values_match_log(expected_bob_messages, 'Bob')
         testcase.assert_received_values_match_log(expected_alice_messages, "Alice")
