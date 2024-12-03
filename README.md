@@ -6,20 +6,20 @@ This is a simple Tic-Tac-Toe game project that is implemented using Python and s
 You can play the game by doing the following:
 
 1. **Start the server:** Run the `server.py` script: it requires the input -p (port number). The host can optionally be specified with -i (IP address). If unspecified, the server is started at address 0.0.0.0. These command line arguments specify the host and port location that the server will be hosted at. Sample usages: 'python server.py -p 65432' or 'python server.py -p 7745 -i localhost'. Running the server will generate a public encryption key inside the file "public_rsa.pem". Users must place this in the same directory as their client program for to be able to communicate successfully with the server. 
-2. **Connect clients:** Run the `client.py` script on any desired number of different machines or terminals. This also requires command line arguments -i (host) -p (port).
+2. **Connect clients:** Run the `client.py` script on any desired number of different machines or terminals. This requires command line arguments -i (host) -p (port).
 3. **Play the game:** Players take turns entering their moves. The first player to get three in a row wins!
 
-Use the register command documented below to create an account if you do not have one. Use the login command to login. You can start a game with the create command. You can join a game that you created or got invited to with the join command. After joining, you make moves with the move command.
+Use the register command documented below to create an account if you do not have one. Use the login command to login. You can start a game with the create command. You can join a game that you created or got invited to by using the join command with the name of the player you are playing against. After joining, you make moves with the move command.
 
 Commands:
 * **Register an account:** Upon successfully connecting to the server, you must register an account. To do this, type 'register' followed by your chosen username and password into the terminal, seperated by spaces. Accounts are stored in a database and persist across server restarts. 
 * **Login to an account:** After you have created an account, you will need to login. Type 'login' followed by your registered username and password into the terminal, seperated by spaces. You can only log in once per session. You cannot log in while you are still logged in through another session.
-* **Create a game:** To create a new game, type 'create' into the terminal followed by the username of your opponent. You can join a game using the joint command below. This command must be used to create a new game with a player after your previous game with that player ended.
-* **Join a game:** To join a game, type 'join' followed by the user name of the other player. A game creator must join their game to make moves in it using the username of the other player. If you try to join a game that does not exist, the server creates it. If you are currently in a game, you quit it and join the other game.
-* **Make a move:** To make a move, choose a space on the board and find it's corresponding coordinate. The rows are designated by 'a', 'b', or 'c'. The columns are '1', '2', or '3'. An example coordinate would be 'b3'. Type 'move' followed by the chosen coordinate into the terminal to make your move. You can only make a move on empty spaces.
+* **Create a game:** To create a new game, type 'create' into the terminal followed by the username of your opponent. You can join a game using the join command below. The create command must be used to create a new game with a player after your previous game with that player ends.
+* **Join a game:** To join a game, type 'join' followed by the user name of the other player. A game creator must join their game to make moves in it using the username of the other player. If you try to join a game that does not exist, the server creates it. If you are currently in a game, this command causes you to quit it and join the other game.
+* **Make a move:** To make a move, choose a space on the board and find its corresponding coordinate. The rows are designated by 'a', 'b', or 'c'. The columns are '1', '2', or '3'. An example coordinate would be 'b3'. Type 'move ' followed by the chosen coordinate into the terminal to make your move. You can only make a move on empty spaces.
 * **Quit the game:** To quit a game, enter 'quit' into the terminal.
-* **Help!:** If you'd like to see these commands during the game, type 'help', and the options will be displayed. Type 'help' followed by the command you would like more information about.
-* **Exiting the program:** To exit the program, type 'exit'.
+* **Help!:** If you would like to see these commands during the game, type 'help', and the options will be displayed. Type 'help' followed by the command you would like more information about.
+* **Exiting the program:** To exit the client program, type 'exit'.
 
 Example of setting up a game: 
 
