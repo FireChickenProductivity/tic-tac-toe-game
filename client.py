@@ -274,7 +274,7 @@ class Client:
         """Responds to socket write and read events"""
         try:
             while not self.is_closed:
-                events = self.selector.select(timeout=None)
+                events = self.selector.select(timeout=5)
                 for key, mask in events:
                     message = key.data
                     try:
