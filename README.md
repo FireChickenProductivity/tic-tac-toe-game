@@ -12,14 +12,28 @@ You can play the game by doing the following:
 Use the register command documented below to create an account if you do not have one. Use the login command to login. You can start a game with the create command. You can join a game that you created or got invited to with the join command. After joining, you make moves with the move command.
 
 Commands:
-* **Register an account:** Upon successfully connecting to the server, you must register an account. To do this, type 'register' followed by your chosen username and password into the terminal, seperated by spaces.
+* **Register an account:** Upon successfully connecting to the server, you must register an account. To do this, type 'register' followed by your chosen username and password into the terminal, seperated by spaces. Accounts are stored in a database and persist across server restarts. 
 * **Login to an account:** After you have created an account, you will need to login. Type 'login' followed by your registered username and password into the terminal, seperated by spaces.
-* **Create a game:** To create a new game, type 'create' into the terminal followed by the username of your opponent. You can join a game using the joint command below. 
-* **Join a game:** To join a game, type 'join' followed by the user name of the other player. A game creator must join their game to make moves in it using the username of the other player. If you try to join a game that does not exist, the server creates it. If you are only going to have one game running at a time, you can ignore the create command and just use the join command.
+* **Create a game:** To create a new game, type 'create' into the terminal followed by the username of your opponent. You can join a game using the joint command below. This command must be used to create a new game with a player after your previous game with that player ended.
+* **Join a game:** To join a game, type 'join' followed by the user name of the other player. A game creator must join their game to make moves in it using the username of the other player. If you try to join a game that does not exist, the server creates it. 
 * **Make a move:** To make a move, choose a space on the board and find it's corresponding coordinate. The rows are designated by 'a', 'b', or 'c'. The columns are '1', '2', or '3'. An example coordinate would be 'b3'. Type 'move' followed by the chosen coordinate into the terminal to make your move. You can only make a move on empty spaces.
 * **Quit the game:** To quit a game, enter 'quit' into the terminal.
 * **Help!:** If you'd like to see these commands during the game, type 'help', and the options will be displayed. Type 'help' followed by the command you would like more information about.
 * **Exiting the program:** To exit the program, type 'exit'.
+
+Example of setting up a game: 
+
+On player1's terminal:
+
+register player1 password
+login player1 password
+join player2
+
+On player2's terminal:
+
+register player2 passw0rd
+login player2 passw0rd
+join player1
 
 Reconnection:
 
@@ -46,7 +60,7 @@ Message Protocols for Communicating From the Client to the Server:
 * Account creation request: A username and password protocol for requesting the creation of an account. The expected response is a text message response describing if the account could be created or already existed. 
 * Login request: A username and password protocol for logging in. The expected response is a text message response describing if login was successful. 
 * Game update request A single byte message protocol describing a move performed by the user. The number represents the tile to perform the move on. The expected response is either a game update response giving the new board state or a text message response explaining that the move was not permitted. If the move ends the game, a game ending message response is expected. 
-* Join game request: a small text message protocol with the string giving the name of the other player in the game to join. Only one game is permitted between 2 players at a time. The expected response is a game piece update message describing the piece controlled by the player followed by a game update response giving the state of the board if successful and a text message response explaining what went wrong if unsuccessful.
+* Join game request: a small text message protocol with the string giving the name of the other player in the game to join. Only one game is permitted between 2 players at a time. The expected response is a game piece update message describing the piece controlled by the player followed by a game update response giving the state of the board if successful and a text message response explaining what went wrong if unsuccessful. If the game does not already exist, it is expected that the server additionally creates the game and provides the expected responses for an update request.
 * Quit game request: consists only of the type code .
 * Game creation protocol: a small text message protocol with the string containing the name of the player to invite to the game. The expected response is a text message explaining if the game creation was successful. 
 * Symmetric encryption key message protocol: communicates a symmetric encryption key to the server through asymmetric encryption to be used for further communications between the client and server. Consists of a type code followed by the 32 byte encryption key and a 16 byte initialization vector.
@@ -86,6 +100,11 @@ Every session uses a symmetric encryption key randomly generated by the client f
 * Someone could launch a denial of service attack against the server by trying to fill memory with games as the server never removes them. That could greatly reduce the number of traffic that would have to be used against the server to deny service. To address this, the server could remove inactive games after a certain amount of time.
 * A denial of service attack could try to fill disk memory by filling the database with accounts or filling the log with events. To address this, the logging code could stop adding to the file after it reaches a certain size. The server could require email verification of accounts before creating them to avoid filling the database with excess accounts and remove accounts after a certain amount of time if they were never used to play any games.
 
+# Limitations
+* Games do not persist across server restarts
+* Games cannot be restarted until they end
+* Players currently cannot chat
+* Players currently cannot check which games they have been invited to
 
 # Mock Socket Testing Framework
 Interactions between the server and clients can be tested with a custom unit testing framework that simulates sockets and selectors. See mock_socket.py and testing_utilities.py for the code. Tests written in this framework can be seen in test_communication.py. 
