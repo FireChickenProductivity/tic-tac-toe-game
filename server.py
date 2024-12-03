@@ -239,7 +239,7 @@ class Server:
         self.logger.log_message(f"accepted connection from {addr}")
         conn.setblocking(False)
         connection_handler = self.create_connection_handler(self.selector, conn, addr)
-        self.selector.register(conn, selectors.EVENT_READ | selectors.EVENT_WRITE, data=connection_handler)
+        self.selector.register(conn, selectors.EVENT_READ, data=connection_handler)
         connection_table_entry = ConnectionTableEntry(connection_handler, AssociatedConnectionState())
         self.connection_table.insert_entry(connection_table_entry)
 

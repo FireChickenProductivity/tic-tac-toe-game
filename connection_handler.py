@@ -64,12 +64,14 @@ def compute_sending_and_receiving_protocol_maps(is_server):
     return sending_protocol_map, receiving_protocol_map
 
 class MessageSender:
-    def __init__(self, logger, connection_information: ConnectionInformation, protocol_map, close_callback):
+    def __init__(self, logger, connection_information: ConnectionInformation, protocol_map, close_callback, ready_for_writing_callback, done_writing_callback):
         """A message sender is responsible for transmitting a message as bytes to a connection peer
             logger: a logger object for logging errors and significant occurrences
             connection_information: the connection information to use for transmitting messages
             protocol_map: a protocol map for converting messages to bytes
             close_callback: the call back to call to close the current connection
+            ready_for_writing_callback: the call back to use when there is data to transmit
+            done_writing_callback: the callback to us when there is no more data to transmit
         """
         self.logger = logger
         self.sock = connection_information.sock
@@ -77,6 +79,8 @@ class MessageSender:
         self.buffer = b""
         self.protocol_map = protocol_map
         self.close_callback = close_callback
+        self.ready_for_writing_callback = ready_for_writing_callback
+        self.done_writing_callback = done_writing_callback
         self.encryption_function = None
         self.block_size = 0
 
@@ -98,6 +102,8 @@ class MessageSender:
                 self.close_callback()
             else:
                 self.buffer = self.buffer[sent:]
+        else:
+            self.done_writing_callback()
 
     def send_message(self, message: Message):
         """Prepares for transmitting the messag to the connection peer. The selector object managing the associated socket performs the write calls."""
@@ -105,6 +111,7 @@ class MessageSender:
         encrypted_bytes = convert_every_n_bytes(self.encryption_function, self.block_size, message_bytes)
         self.buffer += encrypted_bytes
         self.logger.handle_debug_message(MessageEvent(message, self.addr), SENDING_MESSAGE_LOG_CATEGORY)
+        self.ready_for_writing_callback()
 
 class MessageReceiver:
     def __init__(self, logger, connection_information: ConnectionInformation, receiving_protocol_map: protocol.ProtocolMap, close_callback, wait_before_handling_second_block=False):
@@ -246,14 +253,13 @@ class ConnectionHandler:
         sending_protocol_map, receiving_protocol_map = compute_sending_and_receiving_protocol_maps(is_server)
         self.receiving_protocol_map = receiving_protocol_map
         self.message_receiver = MessageReceiver(self.logger, self.connection_information, receiving_protocol_map, self.close, wait_before_handling_second_block=self.is_server)
-        self.message_sender = MessageSender(self.logger, self.connection_information, sending_protocol_map, self.close)
+        self.message_sender = MessageSender(self.logger, self.connection_information, sending_protocol_map, self.close, self.start_writing, self.stop_writing)
 
         #Properly decide what to do with the asymmetric key for communicating with the peer based on if this is the client or the server. The server uses it for the first decryption while the client uses it for the first encryption. 
         if self.is_server:
             self.message_receiver.set_decryption_function(lambda x: cryptography_boundary.decrypt_data_using_private_key(x, asymmetric_key), cryptography_boundary.RSA_BLOCK_SIZE)
         else:
             self.message_sender.set_encryption_function(lambda x: cryptography_boundary.encrypt_data_using_public_key(x, asymmetric_key), cryptography_boundary.RSA_BLOCK_SIZE)
-            self._create_symmetric_key()
 
     def _create_symmetric_key(self):
         """Create symmetric key and share it with the peer"""
@@ -273,6 +279,13 @@ class ConnectionHandler:
     def _set_selector_events_mask(self, mode):
         """Set selector to listen for events."""
         self.selector.modify(self.connection_information.sock, mode, data=self)
+
+    def start_writing(self):
+        mode = selectors.EVENT_READ | selectors.EVENT_WRITE
+        self._set_selector_events_mask(mode)
+
+    def stop_writing(self):
+        self._set_selector_events_mask(selectors.EVENT_READ) 
 
     def respond_to_request(self, request: Message):
         """Responds to the request message"""

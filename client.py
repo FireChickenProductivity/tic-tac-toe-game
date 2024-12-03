@@ -162,7 +162,7 @@ class Client:
         self.logger.log_message(connection_text)
         sock = self.create_socket_from_address(addr)
         connection_information = connection_handler.ConnectionInformation(sock, addr)
-        events = selectors.EVENT_READ | selectors.EVENT_WRITE
+        events = selectors.EVENT_READ
         self.connection_handler = connection_handler.ConnectionHandler(
             self.selector,
             connection_information,
@@ -171,6 +171,7 @@ class Client:
             self.public_key,
         )
         self.selector.register(sock, events, data=self.connection_handler)
+        self.connection_handler._create_symmetric_key()
 
     def send_message(self, message: protocol.Message):
         """Sends the message to the server"""
