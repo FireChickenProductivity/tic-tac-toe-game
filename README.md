@@ -127,5 +127,3 @@ The following test uses should_perform_automatic_login=True to specify that clie
         ]
         testcase.assert_received_values_match_log(expected_alice_messages, "Alice")
 ```
-
-The testing_utilities.py WaitingCommand objects can be used to wait for other conditions before letting a simulated client continue. 
