@@ -131,6 +131,8 @@ class Server:
             state = self.connection_table.get_entry_state(connection_information)
             if state.username is not None:
                 text = "You have already signed in. Please start a new session if you want to sign in under another account."
+            elif username in self.usernames_to_connections:
+                text = "You are already signed in on another computer. Log off on that computer before logging in on this one."
             else:
                 text = f"You are signed in as {username}!"
                 state.username = username

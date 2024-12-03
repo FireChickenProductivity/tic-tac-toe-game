@@ -142,8 +142,6 @@ def login(client, value):
         result = _compute_error_text_on_failed_submission_of_username_and_password(value)
     elif client.get_current_game() is not None:
         result = "You cannot log in to an account in the middle of a game!"
-    elif client.get_username():
-        result = "You cannot log in again during the session because you have already logged in."
     elif not is_valid_username(values[0]):
         result = generate_feedback_text_on_excessively_long_username_input()
     elif not is_valid_password(values[1]):
