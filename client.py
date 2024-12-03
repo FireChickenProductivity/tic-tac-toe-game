@@ -157,7 +157,9 @@ class Client:
     def _create_connection_handler(self):
         """Creates the connection handler for managing the connection with the server"""
         addr = (self.host, self.port)
-        print("starting connection to", addr)
+        connection_text = f"starting connection to {addr}"
+        print(connection_text)
+        self.logger.log_message(connection_text)
         sock = self.create_socket_from_address(addr)
         connection_information = connection_handler.ConnectionInformation(sock, addr)
         events = selectors.EVENT_READ | selectors.EVENT_WRITE
