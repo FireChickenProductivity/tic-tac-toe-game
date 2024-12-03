@@ -72,6 +72,18 @@ Logs are utilized to document errors as well as client and server connect/discon
 * [Statement of Work](https://github.com/FireChickenProductivity/tic-tac-toe-game/blob/main/StatementOfWork.md)
 * [Python Cryptography Library](https://cryptography.io/en/43.0.0/)
 
+# Security Risk/Evaluation
+* Passwords are stored directly in the database, which means that anyone who steals the database obtains the passwords. This should get addressed using password hashes with salt values.
+* The system permits fast, repeated log in attempts, which would make compromising passwords a lot easier. This could be addressed by enforcing a time delay in between login requests from the same source IP address and possibly limiting the number of accepted login requests for a user in a given amount of time.
+* The protocol does not include message authentication, which could allow not only interference in the middle but also packets with spoofed source address to allow impersonating another user. This could be addressed using encrypted message hashes.
+* The encryption scheme does not protect the private key, so anyone who steals it could decrypt the initial symmetric key transmission message. This could be addressed by protecting the private key with a password.
+* Someone in the middle could pretend that the correct public key is theirs. This could be addressed by getting a certificate from a certificate authority.
+* The encryption scheme relies on a single symmetric key for every client session, which could potentially allow cryptanalysis attacks as it is not random what messages get sent when during a session. This could be addressed by updating the symmetric key using a key derivation function after every message. Uncovering the first key would uncover the rest, but that itself could be addressed by starting over with a new random symmetric key periodically.
+* The server has no special protections against denial of service attacks. Properly addressing is beyond the scope of the server code itself.
+* Someone could launch a denial of service attack against the server by trying to fill memory with games as the server never removes them. That could greatly reduce the number of traffic that would have to be used against the server to deny service. To address this, server could remove inactive games after a certain amount of time.
+* A denial of service attack could try to fill disk memory by filling the database with accounts or filling the log with events. To address this, the logging code could stop adding to the file after it reaches a certain size. The server could require email verification of accounts before creating them to avoid filling the database with excess accounts and remove accounts after a certain amount of time if they were never used to play any games.
+
+
 # Mock Socket Testing Framework
 Interactions between the server and clients can be tested with a custom unit testing framework that simulates sockets and selectors. See mock_socket.py and testing_utilities.py for the code. Tests written in this framework can be seen in test_communication.py. 
 
