@@ -15,7 +15,7 @@ Commands:
 * **Register an account:** Upon successfully connecting to the server, you must register an account. To do this, type 'register' followed by your chosen username and password into the terminal, seperated by spaces.
 * **Login to an account:** After you have created an account, you will need to login. Type 'login' followed by your registered username and password into the terminal, seperated by spaces.
 * **Create a game:** To create a new game, type 'create' into the terminal followed by the username of your opponent.
-* **Join a game:** To join a game, type 'join' followed by your opponent's username. A game creator must join their game to make moves in it using the username of the other player. 
+* **Join a game:** To join a game, type 'join' followed by the user name of the other player. A game creator must join their game to make moves in it using the username of the other player. If you try to join a game that does not exist come the server creates it. 
 * **Make a move:** To make a move, choose a space on the board and find it's corresponding coordinate. The rows are designated by 'a', 'b', or 'c'. The columns are '1', '2', or '3'. An example coordinate would be 'b3'. Type 'move' followed by the chosen coordinate into the terminal to make your move. You can only make a move on empty spaces.
 * **Quit the game:** To quit a game, enter 'quit' into the terminal.
 * **Help!:** If you'd like to see these commands during the game, type 'help', and the options will be displayed. Type 'help' followed by the command you would like more information about.
@@ -23,7 +23,7 @@ Commands:
 
 Reconnection:
 
-When the client program detects a problem with the server connection, it tries to reconnect with the server. The amount of time that it waits after each subsequent reconnection attempt increases until it reaches the maximum waiting time of 30 seconds. If the client program receives a message from the server, it resets the waiting time back to the minimum. The user currently has to log in again after the reconnection.
+When the client program detects a problem with the server connection, it tries to reconnect with the server. The amount of time that it waits after each subsequent reconnection attempt increases until it reaches the maximum waiting time of 30 seconds. If the client program receives a message from the server, it resets the waiting time back to the minimum. If the user has already tried to log in, the client tries to log in again using the previous credentials. If the user was previously in a game, the client tries to rejoin the same game.
 
 ## Game Message Protocol Specification
 The game message protocol defines the structure and format of messages exchanged between the server and clients.
@@ -48,7 +48,6 @@ Message Protocols for Communicating From the Client to the Server:
 * Game update request A single byte message protocol describing a move performed by the user. The number represents the tile to perform the move on. The expected response is either a game update response giving the new board state or a text message response explaining that the move was not permitted. If the move ends the game, a game ending message response is expected. 
 * Join game request: a small text message protocol with the string giving the name of the other player in the game to join. Only one game is permitted between 2 players at a time. The expected response is a game piece update message describing the piece controlled by the player followed by a game update response giving the state of the board if successful and a text message response explaining what went wrong if unsuccessful.
 * Quit game request: consists only of the type code .
-* Chat message protocol: a text message protocol the string containing a chat message to send to the other person playing the active game. There is no expected response message.
 * Game creation protocol: a small text message protocol with the string containing the name of the player to invite to the game. The expected response is a text message explaining if the game creation was successful. 
 * Symmetric encryption key message protocol: communicates a symmetric encryption key to the server through asymmetric encryption to be used for further communications between the client and server. Consists of a type code followed by the 32 byte encryption key and a 16 byte initialization vector.
 
@@ -59,10 +58,9 @@ Message Protocols for Communicating From the Server to the Client:
 * Game ending protocol: a single username and single character message protocol. This is sent at the end of a game. The single character at the end describes if the game ended in a win, loss, or tie for the notified player. The username contains the name of the opponent to allow distinguishing between games.
 * Game piece protocol: a single character message protocol containing the game piece belonging to the messaged player. This is sent when a player joins a game.
 
-## Technologies Used
-* Python
-* Sockets
-* Python Cryptography library
+## Requirements to Run The Project
+* Python3.11
+* Python Cryptography library: the project was tested with cryptography version 43.0.0 and may not work with other versions of the library.
 
 ## Logging
 Logs are utilized to document errors as well as client and server connect/disconnect events. These are located in the 'logs' directory under 'client.log' and 'server.log'. 

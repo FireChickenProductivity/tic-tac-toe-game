@@ -1,9 +1,13 @@
+#This file contains integration tests and a client test using mock sockets
+
 import protocol_definitions
 from protocol import Message
-import game_actions
+import game_utilities
 import unittest
 from testing_utilities import *
 from server import MUST_LOG_IN_TEXT
+
+#Utility code
 
 def create_text_message(text: str):
     return Message(protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE, [text])
@@ -22,18 +26,18 @@ def create_result_message(username, result):
     return Message(protocol_definitions.GAME_ENDING_PROTOCOL_TYPE_CODE, [username, result])
 
 def create_victory_message(username):
-    return create_result_message(username, game_actions.VICTORY)
+    return create_result_message(username, game_utilities.VICTORY)
 
 def create_tie_message(username):
-    return create_result_message(username, game_actions.TIE)
+    return create_result_message(username, game_utilities.TIE)
 
 def create_loss_message(username):
-    return create_result_message(username, game_actions.LOSS)
+    return create_result_message(username, game_utilities.LOSS)
 
-EMPTY_GAME_BOARD = [" "*9]
+EMPTY_GAME_BOARD = [game_utilities.EMPTY_POSITION*9]
 EMPTY_GAME_BOARD_MESSAGE = create_game_update_message(EMPTY_GAME_BOARD)
-PLAYING_X_MESSAGE = Message(protocol_definitions.GAME_PIECE_PROTOCOL_TYPE_CODE, ["X"])
-PLAYING_O_MESSAGE = Message(protocol_definitions.GAME_PIECE_PROTOCOL_TYPE_CODE, ["O"])
+PLAYING_X_MESSAGE = Message(protocol_definitions.GAME_PIECE_PROTOCOL_TYPE_CODE, [game_utilities.X_PIECE])
+PLAYING_O_MESSAGE = Message(protocol_definitions.GAME_PIECE_PROTOCOL_TYPE_CODE, [game_utilities.O_PIECE])
 GAME_CREATION_MESSAGE = create_text_message("The game was created!")
 
 class PlayerCommands:
@@ -52,6 +56,7 @@ class PlayerCommands:
 ROW_CHARACTERS = {1: 'a', 2: 'b', 3: 'c', '': ''}
 
 def compute_game_playing_actions_creating_board_state(state: str, initial_x_player_message_count, initial_o_player_message_count):
+    """Returns actions that could have produced the board state by deriving the necessary moves and waiting commands"""
     x_messages = PlayerCommands(initial_x_player_message_count)
     o_messages = PlayerCommands(initial_o_player_message_count)
     row_number = 1
@@ -64,9 +69,9 @@ def compute_game_playing_actions_creating_board_state(state: str, initial_x_play
             column_number = 1
             row = ROW_CHARACTERS[row_number]
         command = "move " + row + str(column_number)
-        if character == 'X':
+        if character == game_utilities.X_PIECE:
             x_messages.insert_command(command)
-        elif character == 'O':
+        elif character == game_utilities.O_PIECE:
             o_messages.insert_command(command)
     return [messages.get_commands() for messages in (x_messages, o_messages)]
 
@@ -96,10 +101,11 @@ def compute_next_partial_state(partial_state, piece, index):
     return partial_state[:index] + piece + partial_state[index + 1:]
 
 def compute_sequential_game_playing_update_messages(state: str):
+    """Returns the server board update messages that would have generated the state with each player moving sequentially across the indices while alternating turns (the player on their turn picks the next index with their piece there in the state string)"""
     messages = []
     partial_state = " "*9
-    x_indices = MoveIndices('X', state)
-    o_indices = MoveIndices('O', state)
+    x_indices = MoveIndices(game_utilities.X_PIECE, state)
+    o_indices = MoveIndices(game_utilities.O_PIECE, state)
     for i in range(len(o_indices)):
         for indices in (x_indices, o_indices):
             index = indices.get_index(i)
@@ -110,6 +116,7 @@ def compute_sequential_game_playing_update_messages(state: str):
         messages.append(create_move_message(partial_state))
     return messages
 
+#Client test
 class TestClient(unittest.TestCase):
     def test_local_help_system(self):
         testcase = TestCase()
@@ -119,6 +126,7 @@ class TestClient(unittest.TestCase):
         print('output', output)
         testcase.assert_values_match_output([ContainsMatcher("Help")], 'Bob')
 
+#Integration testing
 class TestCommunication(unittest.TestCase):
     def test_game_creation(self):
         expected_messages = [
@@ -168,21 +176,28 @@ class TestCommunication(unittest.TestCase):
         testcase.assert_received_values_match_log(expected_bob_messages, 'Bob')
 
     def perform_gameplay_test(self, final_state, expected_first_player_outcome, expected_second_player_outcome):
+        """Tests gameplay reaching the final state"""
         testcase = TestCase(should_perform_automatic_login=True)
         bob_messages_number_before_game_starts = 5
         alice_messages_number_before_game_starts = 6
+
+        #Compute the client commands and board state update messages corresponding to the final board state
         bob_move_commands, alice_move_commands = compute_game_playing_actions_creating_board_state(
             final_state,
             bob_messages_number_before_game_starts,
             alice_messages_number_before_game_starts
         )
         board_state_update_messages = compute_sequential_game_playing_update_messages(final_state)
+
+        #Buffer the client commands
         bob_commands = ["create Alice", 3, 'join Alice', bob_messages_number_before_game_starts]
         bob_commands.extend(bob_move_commands)
         alice_commands = [2, 'join Bob', alice_messages_number_before_game_starts]
         alice_commands.extend(alice_move_commands)
         testcase.buffer_client_commands("Bob", bob_commands)
         testcase.buffer_client_commands("Alice", alice_commands)
+
+        #Assert the expected messages are received at the client
         expected_bob_messages = [
             SkipItem(),
             GAME_CREATION_MESSAGE,
@@ -191,6 +206,7 @@ class TestCommunication(unittest.TestCase):
             EMPTY_GAME_BOARD_MESSAGE,
         ] + board_state_update_messages
         expected_bob_messages.append(create_result_message("Alice", expected_first_player_outcome))
+
         expected_alice_messages = [
             SkipItem(),
             create_text_message("Bob invited you to a game!"),
@@ -199,18 +215,19 @@ class TestCommunication(unittest.TestCase):
             create_text_message("Bob has joined your game!"),
         ] + board_state_update_messages
         expected_alice_messages.append(create_result_message("Bob", expected_second_player_outcome))
+        
         testcase.run()
         testcase.assert_received_values_match_log(expected_bob_messages, 'Bob')
         testcase.assert_received_values_match_log(expected_alice_messages, "Alice")
 
     def test_gameplay(self):
-        self.perform_gameplay_test("XOOX  X  ", game_actions.VICTORY, game_actions.LOSS)
+        self.perform_gameplay_test("XOOX  X  ", game_utilities.VICTORY, game_utilities.LOSS)
     
     def test_tie(self):
-        self.perform_gameplay_test("XOXOOXXXO", game_actions.TIE, game_actions.TIE)
+        self.perform_gameplay_test("XOXOOXXXO", game_utilities.TIE, game_utilities.TIE)
 
     def test_first_player_loss(self):
-        self.perform_gameplay_test("OXXXO   O", game_actions.LOSS, game_actions.VICTORY)
+        self.perform_gameplay_test("OXXXO   O", game_utilities.LOSS, game_utilities.VICTORY)
 
     def test_absent_player_does_not_receive_moves(self):
         testcase = TestCase(should_perform_automatic_login=True)

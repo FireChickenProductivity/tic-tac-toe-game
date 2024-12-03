@@ -1,9 +1,13 @@
+#Automated tests for the protocol code
+
 import unittest
 import os
 import protocol
 import struct
 
+#Utility functions
 def unpack_message(message, message_protocol):
+    """Utility function for unpacking values for a single message from bights"""
     protocol_map = protocol.ProtocolMap([message_protocol])
     message_handler = protocol.MessageHandler(protocol_map)
     message_handler.receive_bytes(message)
@@ -14,6 +18,20 @@ def unpack_message(message, message_protocol):
 def unpack_message_values(message, message_protocol):
     return unpack_message(message, message_protocol)[1]
 
+def encode_text(text):
+    return text.encode("utf-8")
+
+def decode_text(input_bytes):
+    return input_bytes.decode("utf-8")
+
+def create_complex_variable_length_message_protocol(type_code = 2):
+    first_field = protocol.create_string_protocol_field(2)
+    second_field = protocol.create_string_protocol_field(1)
+    third_field = protocol.create_single_byte_nonnegative_integer_protocol_field()
+    result = protocol.MessageProtocol(type_code, [first_field, second_field, third_field])
+    return result
+
+#Test cases for different protocols and message handler
 class TestMessageProtocol(unittest.TestCase):
     def _create_protocol(self):
         return protocol.create_text_message_protocol(0)
@@ -78,19 +96,6 @@ class TestSingleFieldFixedLengthProtocol(unittest.TestCase):
         expected = 1
         actual = protocol.get_number_of_fields()
         self.assertEqual(actual, expected)
-
-def encode_text(text):
-    return text.encode("utf-8")
-
-def decode_text(input_bytes):
-    return input_bytes.decode("utf-8")
-
-def create_complex_variable_length_message_protocol(type_code = 2):
-    first_field = protocol.create_string_protocol_field(2)
-    second_field = protocol.create_string_protocol_field(1)
-    third_field = protocol.create_single_byte_nonnegative_integer_protocol_field()
-    result = protocol.MessageProtocol(type_code, [first_field, second_field, third_field])
-    return result
 
 class TestComplexVariableLengthMessageProtocol(unittest.TestCase):
     def _create_protocol(self):
@@ -161,8 +166,8 @@ class TestMessageHandler(unittest.TestCase):
         protocol_map = protocol.ProtocolMap([message_protocol, nonnegative_integer_protocol])
         return protocol_map
     
-    def _create_values_and_names(self):
-        return [['message'], [1]], [['text'], ['number']]
+    def _create_values(self):
+        return [['message'], [1]]
     
     def _create_more_complex_protocol_map(self):
         variable_length_protocol = create_complex_variable_length_message_protocol(0)
@@ -174,11 +179,11 @@ class TestMessageHandler(unittest.TestCase):
         return protocol_map
 
     def _create_more_complex_values_and_names(self):
-        return [["a"*1000, "b"*5, 9], ["sm", 126], []], [['name', 'password', 'type'], ['big', 'small'], []]
+        return [["a"*1000, "b"*5, 9], ["sm", 126], []]
 
     def test_handles_full_values(self):
         protocol_map = self._create_protocol_map()
-        values, names = self._create_values_and_names()
+        values = self._create_values()
         message_handler = protocol.MessageHandler(protocol_map)
         for i in range(len(values)):
             packing = protocol_map.pack_values_given_type_code(i, *values[i])
@@ -192,7 +197,7 @@ class TestMessageHandler(unittest.TestCase):
             self.assertEqual(expected_type_code, actual_type_code)
             message_handler.prepare_for_next_message()
 
-    def _assert_handles_single_byte_at_a_time_given_map_values_and_names(self, protocol_map, values, names):
+    def _assert_handles_single_byte_at_a_time_given_map_and_values(self, protocol_map, values):
         message_handler = protocol.MessageHandler(protocol_map)
         for i in range(len(values)):
             packing = protocol_map.pack_values_given_type_code(i, *values[i])
@@ -211,13 +216,13 @@ class TestMessageHandler(unittest.TestCase):
 
     def test_handles_single_byte_at_a_time(self):
         protocol_map = self._create_protocol_map()
-        values, names = self._create_values_and_names()
-        self._assert_handles_single_byte_at_a_time_given_map_values_and_names(protocol_map, values, names)
+        values = self._create_values()
+        self._assert_handles_single_byte_at_a_time_given_map_and_values(protocol_map, values)
 
     def test_handle_single_byte_at_a_time_with_more_complex_protocols(self):
         protocol_map = self._create_more_complex_protocol_map()
-        values, names = self._create_more_complex_values_and_names()
-        self._assert_handles_single_byte_at_a_time_given_map_values_and_names(protocol_map, values, names)
+        values = self._create_more_complex_values_and_names()
+        self._assert_handles_single_byte_at_a_time_given_map_and_values(protocol_map, values)
 
 class TestTypeCodeOnlyMessageProtocol(unittest.TestCase):
     def _create_protocol(self):
@@ -292,8 +297,8 @@ class TestSymmetricKeyMessageProtocol(unittest.TestCase):
         message_protocol = self._create_protocol()
         number = os.urandom(32)
         input_vector = os.urandom(16)
-        packing = message_protocol.pack(input_vector, number)
-        unpacked_input_vector, unpacked_number = unpack_message_values(packing, message_protocol)
+        packing = message_protocol.pack(number, input_vector)
+        unpacked_number, unpacked_input_vector = unpack_message_values(packing, message_protocol)
         self.assertEqual(input_vector, unpacked_input_vector)
         self.assertEqual(number, unpacked_number)
     

@@ -1,3 +1,5 @@
+#Provide functionality for logging messages. FileLogger is used to store information in log files. PrimaryMemoryLogger is used for testing purposes
+
 import os
 import datetime
 import file_utilities

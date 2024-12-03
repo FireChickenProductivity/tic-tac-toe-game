@@ -1,3 +1,5 @@
+#Some simple automated tests for the functioning of the cryptography boundary module
+
 import unittest
 from cryptography_boundary import *
 

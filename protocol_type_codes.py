@@ -1,3 +1,5 @@
+#Provides codes for dealing with type codes. A type code defines which message protocol a message is using.
+
 import struct
 TYPE_CODE_SIZE = 1
 def pack_type_code(type_code: int):
@@ -25,6 +27,7 @@ def compute_message_after_type_code(message):
 
 class ProtocolTypeCodeAssigner:
     def __init__(self):
+        """Used to generate the next unused type code"""
         self.next_code = 0
 
     def claim_next_code(self):

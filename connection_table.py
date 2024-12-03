@@ -1,3 +1,5 @@
+#The code in this file manages the relationship between connection handlers and data affiliated with their connections. This is used by the server to communicate with clients. 
+
 from connection_handler import ConnectionHandler, ConnectionInformation
 from protocol import Message
 

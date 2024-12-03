@@ -1,6 +1,8 @@
 
 #!/usr/bin/env python3
 
+#The main file for the server side of the project. The server code is managed by a Server class to help with automated testing
+
 import sys
 import socket
 import selectors
@@ -19,8 +21,11 @@ from database_management import Account, create_database_at_path, retrieve_accou
 import sqlite3 #Imported for database exceptions only
 import cryptography_boundary
 
+#Constants
 MUST_LOG_IN_TEXT = "You must login before using that command!"
+CANNOT_PLAY_SELF_TEXT = "You cannot play a game against yourself!"
 
+#Some utility code
 class AssociatedConnectionState:
     """Data structure for holding variables associated with a connection"""
     def __init__(self):
@@ -40,6 +45,7 @@ def create_listening_socket(address):
     lsock.setblocking(False)
     return lsock
 
+#The main high level request handling and connection management functionality
 class Server:
     def __init__(self, host, port, selector, logger, database_path, listening_socket_creation_function):
         """
@@ -59,12 +65,13 @@ class Server:
         self.game_handler = GameHandler()
         listening_socket = self.create_socket_from_address((host, port))
         #Define asymmetric encryption keys
-        _, self.private_key = cryptography_boundary.obtain_public_private_key_pair("public_rsa.pem", "private_rsa.pem")
+        _, self.private_key = cryptography_boundary.obtain_public_private_key_pair()
         self.selector.register(listening_socket, selectors.EVENT_READ, data=None)
         self._create_protocol_callback_handler()
         self.should_close = False
 
     def _create_protocol_callback_handler(self):
+        """Creates the callback handler for calling the appropriate methods when a request is received"""
         self.protocol_callback_handler = protocol.ProtocolCallbackHandler()
         self.protocol_callback_handler.register_callback_with_protocol(self.handle_signin, protocol_definitions.SIGN_IN_PROTOCOL_TYPE_CODE)
         self.protocol_callback_handler.register_callback_with_protocol(self.handle_account_creation, protocol_definitions.ACCOUNT_CREATION_PROTOCOL_TYPE_CODE)
@@ -73,6 +80,7 @@ class Server:
         self.protocol_callback_handler.register_callback_with_protocol(self.handle_game_quit, protocol_definitions.QUIT_GAME_PROTOCOL_TYPE_CODE)
         self.protocol_callback_handler.register_callback_with_protocol(self.handle_game_move, protocol_definitions.GAME_UPDATE_PROTOCOL_TYPE_CODE)
 
+    #Utility methods
     def _compute_opponent_username(self, username: str):
         state = self.connection_table.get_entry_state(username)
         if state is not None and state.current_game is not None:
@@ -91,6 +99,22 @@ class Server:
         message = Message(protocol_definitions.TEXT_MESSAGE_PROTOCOL_TYPE_CODE, text)
         self.connection_table.send_message_to_entry(message, connection_information)
 
+    def _validate_user_logged_in(self, state, connection_information):
+        """Returns true if the user has logged in and otherwise returns false and notifies the user that they must log in"""
+        if state.username:
+            return True
+        else:
+            self._send_text_message(MUST_LOG_IN_TEXT, connection_information)
+            return False
+
+    def _validate_opponent_not_self(self, opponent_user_name, main_player_state, main_player_connection_information):
+        if main_player_state.username != opponent_user_name:
+            return True
+        else:
+            self._send_text_message(CANNOT_PLAY_SELF_TEXT, main_player_connection_information)
+            return False
+
+    #Request handling methods
     def handle_account_creation(self, username, password, connection_information):
         try:
             insert_account_into_database_at_path(Account(username, password), self.database_path)
@@ -110,17 +134,9 @@ class Server:
             self.usernames_to_connections[username] = connection_information
         self._send_text_message(text, connection_information)
 
-    def _validate_user_logged_in(self, state, connection_information):
-        """Returns true if the user has logged in and otherwise returns false and notifies the user that they must log in"""
-        if state.username:
-            return True
-        else:
-            self._send_text_message(MUST_LOG_IN_TEXT, connection_information)
-            return False
-
     def handle_game_creation(self, invited_user_username, connection_information):
         creator_state = self.connection_table.get_entry_state(connection_information)
-        if self._validate_user_logged_in(creator_state, connection_information):
+        if self._validate_user_logged_in(creator_state, connection_information) and self._validate_opponent_not_self(invited_user_username, creator_state, connection_information):
             creator_username = creator_state.username
             is_game_created = self.game_handler.create_game(creator_username, invited_user_username)
             if is_game_created:
@@ -134,7 +150,9 @@ class Server:
     def handle_game_join(self, other_player_username, connection_information):
         joiner_state = self.connection_table.get_entry_state(connection_information)
         joiner_username = joiner_state.username
-        if self._validate_user_logged_in(joiner_state, connection_information) and self.game_handler.game_exists(joiner_username, other_player_username):
+        if self._validate_user_logged_in(joiner_state, connection_information) and self._validate_opponent_not_self(other_player_username, joiner_state, connection_information):
+            if not self.game_handler.game_exists(joiner_username, other_player_username):
+                self.handle_game_creation(other_player_username, connection_information)
             game = self.game_handler.get_game(joiner_username, other_player_username)
             if joiner_state.current_game is not None:
                 self.handle_game_quit(connection_information)
@@ -147,7 +165,7 @@ class Server:
             self.connection_table.send_message_to_entry(game_message, connection_information)
             self._send_text_message(f"{joiner_username} has joined your game!", other_player_username)
 
-    def _notify_opponent_of_player_exit(self, connection_information, state):
+    def _notify_opponent_of_player_exit(self, state):
         """Notifies the opponent of the current player exiting."""
         if state.current_game is not None:
             self._send_text_message_to_opponent(f"{state.username} has left your game!", state.username)
@@ -156,7 +174,7 @@ class Server:
     def handle_game_quit(self, connection_information):
         state = self.connection_table.get_entry_state(connection_information)
         if state.current_game is not None:
-            self._notify_opponent_of_player_exit(connection_information, state)
+            self._notify_opponent_of_player_exit(state)
             state.current_game = None
         else:
             self._send_text_message(f"You are not in a game, so you cannot quit one.", connection_information)
@@ -191,12 +209,13 @@ class Server:
             else:
                 self._send_text_message("This tile is already taken.", connection_information)
 
+    #Connection management methods
     def cleanup_connection(self, connection_information):
         """Performs cleanup when a connection gets closed"""
         entry = self.connection_table.get_entry(connection_information)
         if entry is not None:
             state = entry.get_state()
-            self._notify_opponent_of_player_exit(connection_information, state)
+            self._notify_opponent_of_player_exit(state)
             self.connection_table.remove_entry(connection_information)
             username = state.username
             if username is not None and username in self.usernames_to_connections:
@@ -247,16 +266,6 @@ class Server:
             print("caught keyboard interrupt, exiting")
         finally:
             self.selector.close()
-
-    def get_connection_table(self):
-        return self.connection_table
-
-    def get_game_manager(self):
-        return self.game_manager
-
-    def get_usernames_to_connections(self):
-        return self.usernames_to_connections
-
 
 def main():
     """The entry point for the server program"""

@@ -1,3 +1,5 @@
+#Provides functionality for mocking sockets and socket management for the sake of automated testing
+
 import connection_handler
 import selectors
 

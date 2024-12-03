@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+#This file contains the code for the client functionality. The Client is implemented as a class to aid with automated testing. Command functionality can be found inside the commands class.
+
 import sys
 import socket
 import time
@@ -13,9 +15,11 @@ import connection_handler
 import logging_utilities
 import protocol_definitions
 import protocol
-import game_actions
+import game_utilities
 from commands import create_commands, CommandManager
 import cryptography_boundary
+
+#Utility function utilized by Client class
 
 def create_socket_from_address(target_address):
     """Creates a client socket that connects to the specified address"""
@@ -28,7 +32,7 @@ class Client:
     #The default and maximum amount of time to wait in between reconnection attempts
     DEFAULT_RECONNECTION_TIMEOUT = 5
     MAXIMUM_RECONNECTION_TIMEOUT = 30
-    def __init__(self, host, port, selector, logger, *, output_text_function = print, socket_creation_function = create_socket_from_address):
+    def __init__(self, host, port, selector, logger, *, output_text_function = print, socket_creation_function = create_socket_from_address, should_reconnect = True):
         """
             Handles the client side of interactions with a server
             host: the server's host address
@@ -37,6 +41,7 @@ class Client:
             logger: the logger to use for logging significant occurrences or errors
             output_text_function: the function used to output text for the client. This is settable as an argument primarily to aid with testing
             socket_creation_function: the function used to create the socket from an address, which is settable to help with testing
+            should_reconnect: determines if the client should reconnect on disconnection. Set to false for testing purposes when reconnecting is not desired.
         """
         self.username = None
         self.password = None
@@ -49,14 +54,25 @@ class Client:
         self.output_text = output_text_function
         self.selector = selector
         self.logger = logger
+        self._load_public_key()
         self.create_socket_from_address = socket_creation_function
         self._create_protocol_callback_handler()
         self._create_connection_handler()
         self.is_closed = False
         self.has_received_successful_message = False
         self.commands: CommandManager = create_commands(self)
+        self.should_reconnect = should_reconnect
+
+    def _load_public_key(self):
+        try:
+            self.public_key = cryptography_boundary.load_public_key()
+        except Exception as e:
+            print(f"An error occurred trying to load the public key for encryption. Please download the public key used by the server and put it in the file {cryptography_boundary.RSA_PUBLIC_KEY_PATH} inside the same directory as the client.py program file.")
+            self.logger.log_message(f"Error loading public encryption key: {e}")
+            exit()
 
     def handle_help_command(self, label):
+        """Display an appropriate help message in response to the help command. The label determines the help topic."""
         if self.commands.has_command(label):
             text = self.commands.get_command_help_message(label)
         else:
@@ -66,10 +82,11 @@ class Client:
         self.output_text("Help: " + text)
 
     def handle_game_ending(self, opponent_username, outcome):
+        """Handle game ending message from the server."""
         outcome_text = 'tie'
-        if outcome == game_actions.LOSS:
+        if outcome == game_utilities.LOSS:
             outcome_text = 'loss'
-        elif outcome == game_actions.VICTORY:
+        elif outcome == game_utilities.VICTORY:
             outcome_text = 'win'
         self.output_text(f"Your game with {opponent_username} ended with a {outcome_text}!")
         if opponent_username == self.current_opponent:
@@ -80,6 +97,9 @@ class Client:
         """Updates the game state"""
         self.output_text("The game board is now:")
         self.current_game = game_text
+
+        #Convert the game text with locations solely represented by index into a nice
+        #2 dimensional format with rows and columns and dashes in between the pieces.
         gamerow_1 = [' ',' ',' ','|',' ',' ',' ','|',' ',' ',' ']
         gamerow_2 = [' ',' ',' ','|',' ',' ',' ','|',' ',' ',' ']
         gamerow_3 = [' ',' ',' ','|',' ',' ',' ','|',' ',' ',' ']
@@ -108,9 +128,10 @@ class Client:
         srow_1 = "".join(gamerow_1)
         srow_2 = "".join(gamerow_2)
         srow_3 = "".join(gamerow_3)
-        self.information_text = f"{self.username} ({self.current_piece}) vs {self.current_opponent} ({game_actions.compute_other_piece(self.current_piece)})"
-        if not game_actions.check_winner(self.current_game):
-            self.information_text += f"\n{game_actions.compute_current_player(self.current_game)}'s turn."
+
+        self.information_text = f"{self.username} ({self.current_piece}) vs {self.current_opponent} ({game_utilities.compute_other_piece(self.current_piece)})"
+        if not game_utilities.determine_outcome(self.current_game):
+            self.information_text += f"\n{game_utilities.compute_current_player(self.current_game)}'s turn."
         self.output_text(self.information_text)
         self.output_text(srow_1 + "\n___|___|___ a\n" +
                          srow_2 + "\n___|___|___ b\n" +
@@ -136,17 +157,18 @@ class Client:
     def _create_connection_handler(self):
         """Creates the connection handler for managing the connection with the server"""
         addr = (self.host, self.port)
-        print("starting connection to", addr)
+        connection_text = f"starting connection to {addr}"
+        print(connection_text)
+        self.logger.log_message(connection_text)
         sock = self.create_socket_from_address(addr)
         connection_information = connection_handler.ConnectionInformation(sock, addr)
         events = selectors.EVENT_READ | selectors.EVENT_WRITE
-        public_key = cryptography_boundary.load_public_key("public_rsa.pem")
         self.connection_handler = connection_handler.ConnectionHandler(
             self.selector,
             connection_information,
             self.logger,
             self.protocol_callback_handler,
-            public_key,
+            self.public_key,
         )
         self.selector.register(sock, events, data=self.connection_handler)
 
@@ -170,28 +192,41 @@ class Client:
             self.reconnection_timeout += 1
 
     def login(self):
+        """Log into the server using the stored credentials."""
         credentials = (self.username, self.password)
         self.send_message(protocol.Message(protocol_definitions.SIGN_IN_PROTOCOL_TYPE_CODE, credentials))
 
     def reconnect(self):
         """Attempts to reconnect to the server"""
         self.close(should_reconnect=True)
-        self.reset_game_state()
+        self.reset_game_board()
         done = False
+        #Keep attempting to log back in until the client closes or connecting does not throw an PeerDisconnectionException
         while not done and not self.is_closed:
             try:
+                #Try to reconnect
                 print("Trying to reconnect...")
                 self._create_connection_handler()
+
+                #Try to resume the session by logging back in with stored credentials if present and then rejoin the previous game if the user was in one
                 if self.has_attempted_login():
                     self.login()
+                    if self.current_opponent is not None:
+                        self.perform_command_from_text_input('join ' + self.current_opponent)
+
+                #Connection was successful if the code gets this far without throwing a PeerDisconnectionException
                 done = True
             except connection_handler.PeerDisconnectionException:
+                #Reconnecting unsuccessful, so pause and then keep looping
                 done = False
                 self.pause_in_between_reconnection_attempts()
 
-    def reset_game_state(self):
+    def reset_game_board(self):
         self.current_game = None
         self.current_piece = None
+        
+    def reset_game_state(self):
+        self.reset_game_board()
         self.current_opponent = None
 
     def handle_command(self, action, value):
@@ -213,6 +248,9 @@ class Client:
 
     def get_current_opponent(self):
         return self.current_opponent
+
+    def get_username(self):
+        return self.username
 
     def get_current_game(self):
         return self.current_game
@@ -243,9 +281,14 @@ class Client:
                         if mask & selectors.EVENT_READ:
                             self.has_received_successful_message = True
                     except connection_handler.PeerDisconnectionException:
-                        print("Connection failure detected. Attempting reconnection...")
-                        self.pause_in_between_reconnection_attempts()
-                        self.reconnect()
+                        #Reconnect if reconnection is enabled. It is currently only ever disabled for some automated testing purposes.
+                        if self.should_reconnect:
+                            print("Connection failure detected. Attempting reconnection...")
+                            self.pause_in_between_reconnection_attempts()
+                            self.reconnect()
+                        else:
+                            print("A connection failure occurred.")
+                            self.close()
                     except Exception:
                         self.logger.log_message(
                             f"main: error: exception for {message.connection_information.addr}:\n{traceback.format_exc()}",
@@ -289,10 +332,12 @@ def splash():
 
 def main():
     """The entry point for the client program"""
+    #Create helper objects
     sel = selectors.DefaultSelector()
     os.makedirs("logs", exist_ok=True)
     client_logger = logging_utilities.FileLogger(os.path.join("logs", "client.log"), debugging_mode = False)
 
+    #Parse command line arguments
     parser = argparse.ArgumentParser(prog='client.py', description='The client program for playing tictactoe.', usage=f"usage: {sys.argv[0]} -i <host> -p <port>")
     parser.add_argument("-i")
     parser.add_argument("-p", type=int)
@@ -304,13 +349,14 @@ def main():
 
     host, port = arguments.i, arguments.p
 
-    connection = Client(host, port, sel, client_logger)
+    #Create client object and start the game
+    client = Client(host, port, sel, client_logger)
     splash()
     #Run the client input loop in a separate thread
-    client_input_thread = Thread(target=perform_user_commands_through_connection, args=(connection,))
+    client_input_thread = Thread(target=perform_user_commands_through_connection, args=(client,))
     client_input_thread.start()
 
-    connection.run_selector_loop()
+    client.run_selector_loop()
 
 if __name__ == '__main__':
     main()

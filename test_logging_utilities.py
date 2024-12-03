@@ -1,3 +1,5 @@
+#Automated tests for the primary memory logger used during testing
+
 from logging_utilities import PrimaryMemoryLogger
 
 import unittest
