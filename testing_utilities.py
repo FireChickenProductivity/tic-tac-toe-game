@@ -1,9 +1,8 @@
 import time
 from threading import Thread
-import selectors
 from protocol import Message
-from client import Client, create_socket_from_address
-from server import Server, create_listening_socket
+from client import Client
+from server import Server
 from database_management import insert_account_into_database_at_path_if_nonexistent, Account, create_database_at_path
 import connection_handler
 from logging_utilities import PrimaryMemoryLogger
@@ -120,20 +119,6 @@ class WaitingCommand:
     def __call__(self, client: TestClientHandler):
         wait_until_true_or_timeout(lambda: self.condition_function(client))
 
-class OutputWaitingCommand(WaitingCommand):
-    def __init__(self, output):
-        self.output = output
-
-    def condition_function(self, client: TestClientHandler):
-        return self.output in client.get_output()
-
-class OutputLengthWaitingCommand(WaitingCommand):
-    def __init__(self, length):
-        self.length = length
-
-    def condition_function(self, client: TestClientHandler):
-        return len(client.get_output()) >= self.length
-
 class ReceivedMessagesLengthWaitingCommand(WaitingCommand):
     def __init__(self, length):
         self.length = length
@@ -176,25 +161,14 @@ class TestServerHandler:
         self.server.close()
 
 class TestingFactory:
-    def __init__(self, server_host, server_port, *, should_use_real_sockets=False):
+    def __init__(self, server_host, server_port):
         self.server_host = server_host
         self.server_port = server_port
-        self.should_use_real_sockets=should_use_real_sockets
-        if not self.should_use_real_sockets:
-            self.internet = MockInternet()
-            self.client_port = 5001
-            self.client_ip_address = 90
+        self.internet = MockInternet()
+        self.client_port = 5001
+        self.client_ip_address = 90
 
-    def create_real_client(self, credentials: Credentials=None):
-        return TestClientHandler(
-            self.server_host,
-            self.server_port,
-            selectors.DefaultSelector(),
-            create_socket_from_address,
-            credentials
-        )
-
-    def create_mock_client(self, credentials: Credentials=None):
+    def create_client(self, credentials: Credentials=None):
         client_address = (str(self.client_ip_address), self.client_port)
         self.client_ip_address += 1
         return TestClientHandler(
@@ -205,22 +179,7 @@ class TestingFactory:
             credentials,
         )
 
-    def create_client(self, credentials: Credentials=None):
-        if self.should_use_real_sockets:
-            return self.create_real_client(credentials)
-        else:
-            return self.create_mock_client(credentials)
-
-    def create_real_server(self, database_path):
-        return TestServerHandler(
-            self.server_host,
-            self.server_port,
-            selectors.DefaultSelector(),
-            database_path,
-            create_listening_socket
-            )
-
-    def create_mock_server(self, database_path):
+    def create_server(self, database_path='testing.db'):
         return TestServerHandler(
             self.server_host,
             self.server_port,
@@ -228,12 +187,6 @@ class TestingFactory:
             database_path,
             self.internet.create_listening_socket_from_address
         )
-
-    def create_server(self, database_path='testing.db'):
-        if self.should_use_real_sockets:
-            return self.create_real_server(database_path)
-        else:
-            return self.create_mock_server(database_path)
 
 def create_simple_password(username: str):
     return username + str(len(username)) + username[0]*5
@@ -262,10 +215,10 @@ class TestCase:
     DEFAULT_SERVER_PORT = 9090
     DEFAULT_SERVER_HOST = 'localhost'
     DEFAULT_SERVER_ADDRESS = (DEFAULT_SERVER_HOST, DEFAULT_SERVER_PORT)
-    def __init__(self, server_host=DEFAULT_SERVER_HOST, server_port=DEFAULT_SERVER_PORT, use_real_sockets=False, database_path="testing.db", password_function=create_simple_password, should_perform_automatic_login=False):
+    def __init__(self, server_host=DEFAULT_SERVER_HOST, server_port=DEFAULT_SERVER_PORT, database_path="testing.db", password_function=create_simple_password, should_perform_automatic_login=False):
         self.server_host = server_host
         self.server_port = server_port
-        self.factory = TestingFactory(server_host, server_port, should_use_real_sockets=use_real_sockets)
+        self.factory = TestingFactory(server_host, server_port)
         self.clients = {}
         self.password_function = password_function
         self.server = self.factory.create_server(database_path)
@@ -354,8 +307,6 @@ class TestCase:
             return expected == actual
         elif isinstance(expected, Message):
             return connection_handler.MessageEvent(expected, (self.server_host, self.server_port)) == actual
-        elif type(expected) == int:
-            return expected == actual.message.type_code
         elif type(expected) == SkipItem:
             return True
 
