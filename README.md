@@ -13,7 +13,7 @@ Use the register command documented below to create an account if you do not hav
 
 Commands:
 * **Register an account:** Upon successfully connecting to the server, you must register an account. To do this, type 'register' followed by your chosen username and password into the terminal, seperated by spaces. Accounts are stored in a database and persist across server restarts. 
-* **Login to an account:** After you have created an account, you will need to login. Type 'login' followed by your registered username and password into the terminal, seperated by spaces.
+* **Login to an account:** After you have created an account, you will need to login. Type 'login' followed by your registered username and password into the terminal, seperated by spaces. You can only log in once per session. You cannot log in while you are still logged in through another session.
 * **Create a game:** To create a new game, type 'create' into the terminal followed by the username of your opponent. You can join a game using the joint command below. This command must be used to create a new game with a player after your previous game with that player ended.
 * **Join a game:** To join a game, type 'join' followed by the user name of the other player. A game creator must join their game to make moves in it using the username of the other player. If you try to join a game that does not exist, the server creates it. If you are currently in a game, you quit it and join the other game.
 * **Make a move:** To make a move, choose a space on the board and find it's corresponding coordinate. The rows are designated by 'a', 'b', or 'c'. The columns are '1', '2', or '3'. An example coordinate would be 'b3'. Type 'move' followed by the chosen coordinate into the terminal to make your move. You can only make a move on empty spaces.
@@ -162,11 +162,11 @@ The following test uses should_perform_automatic_login=True to specify that clie
 ```
 
 # Roadmap
-Given more time to work on the project, I would like to address the mentioned security issues mentioned above. I would also like to replace some of the instances where the server uses text messages to instead use specialized protocols. A single type code could be used for reporting successful login, failed login, successful registration, and failed registration for instance. I would also like to reduce the amount of messages sent from the server to the client. The server does not need to tell clients currently in their game what the outcome is as clients could infer from the final game state. 
+Given more time to work on the project, I would like to address the security issues mentioned above. I would also like to replace some of the instances where the server uses text messages to instead use specialized protocols. A single type code could be used for reporting successful login, failed login, successful registration, and failed registration for instance. I could also have a notification protocol with a specific type code followed by a byte identifying the purpose of the notification. I would like to reduce the amount of messages sent from the server to the client. The server does not need to tell clients currently in their game what the outcome is as clients could infer from the final game state, for instance. 
 
 The interface could use some improvements. When you get invited to a game, the client should respond by explaining how to join it. It should be possible to make moves inside a game with the position alone without having to type the word move first. Adding a graphical interface should not take too long and should make dealing with the client a lot easier.
 
-Additional functionality on the server should include the ability to see what games you have been invited to and the ability to send chat messages. 
+Additional functionality on the server should include the ability to see what games you have been invited to and the ability to send chat messages. Account management functionality should include the ability to change your password. The server should logout inactive sessions as any user with a frozen session would currently not be able to log back in until the original session ends.
 
 # Retrospective
 ## What worked well
@@ -174,4 +174,4 @@ Defining abstract code for creating message protocols made it much easier to rap
 ## What could be improved on
 The teamwork could have been better. It would have helped if teammates stated expectations more clearly upfront. More work should have gone into making submitted code easier for others to understand.
 
-The instructions have been insufficiently clear during earlier iterations of the project. Quality documentation should have gotten higher priority. The game should have also been designed to better help users figure out how to use it such as by displaying helpful messages.
+The game instructions have been insufficiently clear during earlier iterations of the project. Quality documentation should have gotten higher priority. The game should have also been designed to better help users figure out how to use it such as by displaying helpful messages.
