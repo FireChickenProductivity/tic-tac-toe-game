@@ -157,13 +157,13 @@ class Client:
         """prints splash screen and game instructions"""
         print("        _____  _   __\n" +
               "         | |  | | / /`\n" +
-              "         |_|  |_| \_\_,\n" +
+              "         |_|  |_| \\_\\_,\n" +
               "       _____   __    __\n" +
-              "        | |   / /\  / /`\n" +
-              "        |_|  /_/--\ \_\_,\n" +
+              "        | |   / /\\  / /`\n" +
+              "        |_|  /_/--\\ \\_\\_,\n" +
               "       _____  ___   ____\n" +
-              "        | |  / / \ | |_\n" +
-              "        |_|  \_\_/ |_|__\n")
+              "        | |  / / \\ | |_\n" +
+              "        |_|  \\_\\_/ |_|__\n")
         print("Welcome to Team CV's Tic-Tac-Toe game!")
         print("To begin, you will need to create an account and login.\n" +
               "Then, create a game or join someone else's.\n" + 
